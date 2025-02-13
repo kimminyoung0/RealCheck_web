@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}허위매물 판별 - RealCheck{% endblock %}
+
+{% block content %}
+<h1>예측을 위한 데이터 입력</h1>
+
+<!-- 🔹 라디오 버튼을 가로 정렬 -->
+<!-- 🔹 데이터 입력 방식 선택 (버튼으로 변경) -->
+<div class="input-toggle">
+    <button id="manual-btn" class="toggle-btn active">직접 입력</button>
+    <button id="file-btn" class="toggle-btn">파일 업로드</button>
+</div>
+
+
+<!-- 직접 입력 폼 -->
+<form id="predict-form" enctype="multipart/form-data">
+    <div class="input-group">
+        <label>월세(단위 만원):</label>
+        <input type="number" name="월세" placeholder="예: 50">
+    </div>
+
+    <div class="input-group">
+        <label>보증금(단위 만원):</label>
+        <input type="number" name="보증금" placeholder="예: 7000">
+    </div>
+
+    <div class="input-group">
+        <label>관리비(단위 만원):</label>
+        <input type="number" name="관리비" placeholder="예: 8">
+    </div>
+
+    <div class="input-group">
+        <label>전용면적:</label>
+        <input type="number" name="전용면적" placeholder="예: 36.30">
+    </div>
+
+    <div class="input-group">
+        <label>방수:</label>
+        <input type="number" name="방수" placeholder="예: 1">
+    </div>
+
+    <div class="input-group">
+        <label>욕실수:</label>
+        <input type="number" name="욕실수" placeholder="예: 1">
+    </div>
+
+    <div class="input-group">
+        <label>방향:</label>
+        <select name="방향">
+            <option value="남향">남향</option>
+            <option value="남동향">남동향</option>
+            <option value="남서향">남서향</option>
+            <option value="동향">동향</option>
+            <option value="서향">서향</option>
+            <option value="북동향">북동향</option>
+            <option value="북향">북향</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>해당층:</label>
+        <input type="number" name="해당층" placeholder="예: 3">
+    </div>
+
+    <div class="input-group">
+        <label>총층:</label>
+        <input type="number" name="총층" placeholder="예: 8">
+    </div>
+
+    <div class="input-group">
+        <label>총주차대수:</label>
+        <input type="number" name="총주차대수" placeholder="예: 100">
+    </div>
+
+    <div class="input-group">
+        <label>주차가능여부:</label>
+        <select name="주차가능여부">
+            <option value="가능">가능</option>
+            <option value="불가능">불가능</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>제공플랫폼:</label>
+        <input type="text" name="제공플랫폼">
+    </div>
+
+    <div class="input-group">
+        <label>중개사무소:</label>
+        <input type="text" name="중개사무소">
+    </div>
+
+    <div class="input-group">
+        <label for="게재일자">게재일자:</label>
+        <input type="date" id = "게재일자" name="게재일자" required>
+    </div>
+
+    <button type="submit">예측하기</button>
+</form>
+
+<!-- 파일 업로드 폼 -->
+<form id="upload-form" enctype="multipart/form-data" style="display: none;">
+    <div class="input-group">
+        <label>CSV 파일 업로드:</label>
+        <input type="file" id="file-input" name="file">
+    </div>
+    <button type="submit">파일 업로드 및 예측</button>
+</form>
+{% endblock %}

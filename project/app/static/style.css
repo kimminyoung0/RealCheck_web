@@ -1,0 +1,225 @@
+/* 기본 설정 */
+body {
+  font-family: 'Nanum Gothic', sans-serif;
+  background-color: #f4f7f6;
+  color: #2e3b2d;
+  margin: 0;
+  padding: 0;
+}
+
+/* 헤더 스타일 */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #4c6b4f;
+  padding: 15px 20px;
+  color: white;
+}
+
+.logo {
+  font-size: 40px;
+  font-weight: bold;
+  color: #ffffff;
+  text-decoration: none;  /* ✅ 밑줄 제거 */
+}
+
+.logo:hover {
+  color: #3a5a40;  /* ✅ 마우스를 올렸을 때 색상 변경 */
+}
+
+/* 네비게이션 바 */
+nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 30px;
+}
+
+nav ul li {
+  display: inline;
+}
+
+nav ul li a {
+  text-decoration: none;
+  color: white;
+  font-size: 19px;
+  padding: 8px 15px;
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+nav ul li a:hover {
+  background-color: #3a5240;
+}
+
+/* My Page 버튼 */
+.mypage {
+  background-color: #678E67;
+  padding: 8px 15px;
+  border-radius: 5px;
+}
+
+.mypage:hover {
+  background-color: #567358;
+}
+
+/* 메인 콘텐츠 */
+/* main 영역 크기 조정 */
+main {
+  text-align: center;
+  padding: 80px 20px;  /* 기존보다 위아래 여백을 더 넓게 설정 */
+  min-height: 800px;  /* 최소 높이를 설정하여 더 커 보이도록 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+
+.intro h2 {
+  font-size: 35px;
+  color: #2e3b2d;
+}
+
+.intro p {
+  font-size: 24px;
+  color: #4d5d4a;
+}
+
+/* CTA 버튼 */
+.cta-button {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 25px;
+  background-color: #678E67;
+  color: white;
+  font-size: 26px;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background 0.3s;
+}
+
+.cta-button:hover {
+  background-color: #567358;
+}
+
+/* 푸터 */
+footer {
+  text-align: center;
+  padding: 15px;
+  background-color: #4c6b4f;
+  color: white;
+  margin-top: 50px;
+  font-size: 20px;
+}
+
+/* 입력 필드 스타일 */
+input, select {
+  width: 100%;
+  padding: 10px; /* 내부 여백 */
+  margin: 8px 0; /* 위아래 간격 추가 */
+  border: 1px solid rgb(204, 204, 204); /* 테두리 색 */
+  border-radius: 8px; /* 테두리 둥글게 */
+  font-size: 16px;
+  background-color: white;
+  transition: all 0.3s ease-in-out;
+}
+
+/* 입력 칸 포커스 시 강조 */
+input:focus, select:focus {
+  border-color: #4c6b4f; /* 초록 계열 강조 */
+  outline: none;
+  box-shadow: 0px 0px 5px rgba(76, 107, 79, 0.5);
+}
+
+/* 🔸 입력하지 않은 필드 빨간색 강조 */
+.input-error {
+  border: 2px solid red !important;
+  background-color: #ffecec;
+}
+
+/* 🔹 라디오 버튼과 텍스트를 나란히 정렬 */
+.radio-group {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* 버튼과 텍스트 사이 간격 */
+  margin-bottom: 20px;
+}
+
+/* 🔹 입력 필드와 라벨을 가로 정렬 */
+.input-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 15px; /* 라벨과 입력칸 사이 간격 */
+  margin-bottom: 12px; /* 필드 간격 */
+}
+
+.input-group label {
+  width: 150px; /* 레이블 고정 너비 */
+  text-align: right; /* 텍스트 오른쪽 정렬 */
+}
+
+.input-group input,
+.input-group select {
+  flex-grow: 1; /* 입력 필드가 가득 차도록 */
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+/* 🔹 숨겨진 파일 업로드 폼을 정상적으로 표시 */
+#upload-form {
+  display: none;
+  margin-top: 20px;
+}
+
+/* 🔹 버튼 스타일 */
+.input-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.toggle-btn {
+  padding: 10px 20px;
+  border: none;
+  background-color: #ddd;
+  cursor: pointer;
+  font-size: 16px;
+  margin: 0 10px;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+
+.toggle-btn.active {
+  background-color: #4A7C59;  /* 선택된 버튼 색상 */
+  color: white;
+}
+
+/* 🔹 입력 필드와 라벨 한 줄 정렬 */
+.input-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 500px;
+  margin: 10px auto;
+}
+
+.input-group label {
+  min-width: 150px;  /* 라벨 최소 너비 */
+  text-align: right;
+  margin-right: 10px;
+}
+
+.input-group input, .input-group select {
+  flex-grow: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+

@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: min0
+      POSTGRES_PASSWORD: kim980317
+      POSTGRES_DB: database
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "6010:6000" #호스트 포트 : 컨테이너 포트
+      #컨테이너 내부에서 실행 중인 Flask는 기본적으로 5000번 포트에서 실행되도록 설정되어 있음.
+      #따라서 컨테이너 내부에서는 5000번 포트에서 실행되는 게 맞고, 호스트에서는 5050으로 접근하도록 5050:5000으로 매핑하는 것
+    environment:
+      DATABASE_URL: postgresql://min0:kim980317@db/database
