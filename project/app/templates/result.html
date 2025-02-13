@@ -1,16 +1,63 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>예측 결과</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <h1>예측 결과</h1>
-    <div>
-        {{ table|safe }}
-    </div>
-    <a href="/predict">다시 예측하기</a>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>🏠 예측 결과</h1>
+
+<!-- ✅ 결과를 표시할 div 추가 -->
+<div id="result">
+    <p>예측 결과를 불러오는 중...</p>
+</div>
+
+<button onclick="goBack()">⬅ 뒤로 가기</button>
+
+<script>
+    function getQueryParams() {
+        const params = new URLSearchParams(window.location.search);
+        return JSON.parse(params.get("predictions") || "[]");
+    }
+
+    function displayResults() {
+        const predictions = getQueryParams();
+        const resultDiv = document.getElementById("result");
+
+        if (!resultDiv) {
+            console.error("🚨 `id="result"` 요소를 찾을 수 없습니다. HTML을 확인하세요.");
+            return;
+        }
+
+        if (!predictions.length) {
+            resultDiv.innerHTML = "<p style='color:red;'>❌ 예측 결과가 없습니다.</p>";
+            return;
+        }
+
+        let tableHTML = `
+            <table border="1" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>번호</th>
+                        <th>예측 결과</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        predictions.forEach((pred, index) => {
+            tableHTML += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${pred}</td>
+                </tr>
+            `;
+        });
+
+        tableHTML += `</tbody></table>`;
+        resultDiv.innerHTML = `<h3>📊 예측 결과</h3>${tableHTML}`;
+    }
+
+    function goBack() {
+        window.history.back();
+    }
+
+    window.onload = displayResults;
+</script>
+{% endblock %}

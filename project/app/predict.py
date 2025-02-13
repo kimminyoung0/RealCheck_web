@@ -10,7 +10,7 @@ predict_bp = Blueprint('predict', __name__)
 
 # 모델 로드
 try:
-    model = pickle.load(open("model/model_0.81.pkl", "rb"))
+    model = pickle.load(open("model/model_0.83.pkl", "rb"))
 except FileNotFoundError:
     raise RuntimeError("❌ 모델 파일을 찾을 수 없습니다. `model/model_0.81.pkl` 확인 필요.")
 
@@ -107,6 +107,7 @@ def make_prediction(input_data):
     except Exception as e:
         raise ValueError(f"🚨 예측 중 오류 발생: {str(e)}")
 
+#predict url로 POST 요청이 들어오면 predict()메서드를 수행하겠다는 의미
 @predict_bp.route("/predict", methods=["POST"])
 def predict():
     """ JSON 입력을 받아서 단일 예측 수행 """
@@ -140,11 +141,22 @@ def predict_file():
     user_id, error_response = get_user_id_from_token()
     if error_response:
         return error_response
+    
+    # ✅ 파일 업로드 체크 로직 추가
+    if "file" not in request.files:
+        return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
 
     file = request.files.get("file")
-    if not file:
-        return jsonify({"error": "파일을 찾을 수 없습니다."}), 400
+    
+    if file is None:
+        return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
 
+    if file.filename == "":
+        return jsonify({"error": "파일이 선택되지 않았습니다."}), 400
+
+    if not file.filename.endswith(".csv"):
+        return jsonify({"error": "CSV 파일만 업로드할 수 있습니다."}), 400
+    
     try:
         df = pd.read_csv(file)
 

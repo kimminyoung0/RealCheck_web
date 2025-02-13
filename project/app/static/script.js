@@ -1,38 +1,34 @@
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     const manualForm = document.getElementById("predict-form");  // 직접 입력 폼
     const fileForm = document.getElementById("upload-form");  // 파일 업로드 폼
-    const manualBtn = document.getElementById("manual-btn");  // 직접 입력 버튼
-    const fileBtn = document.getElementById("file-btn");  // 파일 업로드 버튼
     const resultDiv = document.getElementById("result");
-    const inputs = document.querySelectorAll("input[type='text'], input[type='number'], input[type='date'], select");
     const fileInput = document.getElementById("file-input");
-    const fileNameDisplay = document.getElementById("file-name");  // 선택된 파일명 표시
+    const manualBtn = document.getElementById("manual-btn");
+    const fileBtn = document.getElementById("file-btn");
+    const fileNameDisplay = document.getElementById("file-input");  // 선택된 파일명 표시 (오타 수정)
 
     console.log("📌 스크립트 로드 완료");
 
     // 🔹 기본 상태 설정 (직접 입력 폼 활성화)
     manualForm.style.display = "block";
     fileForm.style.display = "none";
-    manualBtn.classList.add("button-active");
+    manualBtn.classList.add("active"); 
+    fileBtn.classList.remove("active");
 
-    // 🔹 "직접 입력" 버튼 클릭 시 (버튼 상태 변경 + 폼 전환)
-    manualBtn.addEventListener("click", function() {
+    // 🔹 "직접 입력" 버튼 클릭 시
+    manualBtn.addEventListener("click", function () {
         manualForm.style.display = "block";
         fileForm.style.display = "none";
-        manualBtn.classList.add("button-active");
-        manualBtn.classList.remove("button-inactive");
-        fileBtn.classList.add("button-inactive");
-        fileBtn.classList.remove("button-active");
+        manualBtn.classList.add("active"); 
+        fileBtn.classList.remove("active");
     });
 
-    // 🔹 "파일 업로드" 버튼 클릭 시 (버튼 상태 변경 + 폼 전환)
-    fileBtn.addEventListener("click", function() {
+    // 🔹 "파일 업로드" 버튼 클릭 시
+    fileBtn.addEventListener("click", function () {
         manualForm.style.display = "none";
         fileForm.style.display = "block";
-        fileBtn.classList.add("button-active");
-        fileBtn.classList.remove("button-inactive");
-        manualBtn.classList.add("button-inactive");
-        manualBtn.classList.remove("button-active");
+        fileBtn.classList.add("active");
+        manualBtn.classList.remove("active");
     });
 
     // 🔹 파일 선택 시 파일명 표시
@@ -40,19 +36,14 @@ document.addEventListener("DOMContentLoaded", function() {
         if (fileInput.files.length > 0) {
             fileNameDisplay.textContent = `📂 선택된 파일: ${fileInput.files[0].name}`;
         } else {
-            fileNameDisplay.textContent = "선택된 파일 없음";
+            fileNameDisplay.textContent = "📁 파일을 선택하세요.";
         }
     });
 
-    // 🔹 직접 입력 폼 제출 처리
-    manualForm.addEventListener("submit", function(event) {
+    // 🔹 직접 입력 폼 제출 처리 (단일 예측)
+    manualForm.addEventListener("submit", function (event) {
         event.preventDefault();
 
-        // ✅ 게재일자 TIMESTAMP 변환 (YYYY-MM-DD → YYYY-MM-DD 00:00:00)
-        let dateInput = document.querySelector('input[name="게재일자"]').value;
-        let timestampValue = dateInput ? `${dateInput} 00:00:00` : null;
-
-        // ✅ 입력값 가져오기 & JSON 변환
         let formData = {
             "월세": parseFloat(document.querySelector('input[name="월세"]').value),
             "보증금": parseFloat(document.querySelector('input[name="보증금"]').value),
@@ -67,10 +58,9 @@ document.addEventListener("DOMContentLoaded", function() {
             "주차가능여부": document.querySelector('select[name="주차가능여부"]').value,
             "제공플랫폼": document.querySelector('input[name="제공플랫폼"]').value,
             "중개사무소": document.querySelector('input[name="중개사무소"]').value,
-            "게재일자": timestampValue  // ✅ TIMESTAMP 변환 완료
+            "게재일자": document.querySelector('input[name="게재일자"]').value + " 00:00:00"
         };
 
-        // 🔹 서버에 예측 요청 보내기 (POST 요청)
         fetch("/predict", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -78,25 +68,27 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error(`서버 오류: ${response.status} ${response.statusText}`);
+                return response.json().then(err => {
+                    throw new Error(`🚨 서버 오류: ${response.status} - ${err.error}`);
+                });
             }
             return response.json();
         })
         .then(data => {
-            resultDiv.innerHTML = `<strong>예측 결과:</strong> ${data.prediction}<br><strong>신뢰도:</strong> ${data.confidence}%`;
+            resultDiv.innerHTML = `<strong>예측 결과:</strong> ${data.prediction}<br><strong>신뢰도:</strong> ${data.pred_proba}%`;
         })
         .catch(error => {
-            console.error("Error:", error);
+            console.error("❌ 예측 중 오류 발생:", error);
             resultDiv.innerText = `❌ 예측 중 오류 발생: ${error.message}`;
         });
     });
 
-    // 🔹 파일 업로드 폼 제출 처리
-    fileForm.addEventListener("submit", function(event) {
+    // 🔹 파일 업로드 폼 제출 처리 (다중 예측)
+    fileForm.addEventListener("submit", function (event) {
         event.preventDefault();
 
         if (!fileInput.files.length) {
-            alert("파일을 선택해주세요!");
+            alert("❌ 파일을 선택해주세요!");
             return;
         }
 
@@ -107,31 +99,66 @@ document.addEventListener("DOMContentLoaded", function() {
             method: "POST",
             body: formData
         })
-        .then(response => response.text())
-        .then(html => {
-            document.open();
-            document.write(html);
-            document.close();
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(`🚨 서버 오류: ${response.status} - ${err.error}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("✅ 예측 결과:", data);
+            
+            // 🔥 결과 페이지(result.html)로 이동하면서 데이터 전달
+            const queryParams = new URLSearchParams({ predictions: JSON.stringify(data.predictions) });
+            window.location.href = `/result.html?${queryParams.toString()}`;
         })
         .catch(error => {
-            console.error("Error:", error);
-            resultDiv.innerText = "❌ 파일 예측 중 오류 발생";
+            console.error("❌ 파일 예측 중 오류 발생:", error);
+            alert("❌ 파일 예측 중 오류가 발생했습니다. 콘솔을 확인하세요.");
         });
     });
+});  // ✅ `document.addEventListener` 닫는 괄호
 
-    // 🔹 입력 필드 placeholder 동작 & 빨간색 테두리 제거
-    inputs.forEach(input => {
-        const placeholderText = input.placeholder; // 기존 placeholder 값 저장
+// 🔹 예측 결과 표시 함수 (표 형태) → `document.addEventListener` 바깥에 있어야 함!
+function displayResults(data) {
+    const resultDiv = document.getElementById("result"); // ✅ resultDiv를 함수 내에서 다시 가져옴
 
-        input.addEventListener("focus", function () {
-            this.placeholder = "";  // 입력 시 placeholder 제거
-            this.classList.remove("input-error"); // 입력하면 빨간색 테두리 제거
-        });
+    if (!resultDiv) {
+        console.error("🚨 `id='result'` 요소를 찾을 수 없습니다. HTML을 확인하세요.");
+        return;
+    }
+    
 
-        input.addEventListener("blur", function () {
-            if (this.value === "") {
-                this.placeholder = placeholderText;  // 입력값이 없으면 placeholder 복원
-            }
-        });
+    if (!data.predictions) {
+        resultDiv.innerHTML = `<p style="color:red;">❌ 예측 결과를 받을 수 없습니다.</p>`;
+        return;
+    }
+
+    let tableHTML = `
+        <table border="1" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>번호</th>
+                    <th>예측 결과</th>
+                    <th>신뢰도 (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    data.predictions.forEach((pred, index) => {
+        tableHTML += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${pred.prediction}</td>
+                <td>${pred.pred_proba}%</td>
+            </tr>
+        `;
     });
-});
+
+    tableHTML += `</tbody></table>`;
+
+    resultDiv.innerHTML = `<h3>📊 예측 결과</h3> ${tableHTML}`;
+}
