@@ -3,6 +3,6 @@ flask-sqlalchemy
 flask-bcrypt
 flask-jwt-extended
 psycopg2
-pandas
-scikit-learn
-xgboost
+pandas==2.2.3
+scikit-learn==1.4.1post1
+xgboost==2.0.3

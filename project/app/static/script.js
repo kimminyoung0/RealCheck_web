@@ -95,31 +95,27 @@ document.addEventListener("DOMContentLoaded", function () {
         let formData = new FormData();
         formData.append("file", fileInput.files[0]);
 
+
         fetch("/predict/file", {
             method: "POST",
             body: formData
         })
         .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => {
-                    throw new Error(`🚨 서버 오류: ${response.status} - ${err.error}`);
-                });
-            }
-            return response.json();
+            console.log("📥 서버 응답 상태 코드:", response.status);
+            return response.text();  // ✅ HTML을 받아서 처리
         })
-        .then(data => {
-            console.log("✅ 예측 결과:", data);
-            
-            // 🔥 결과 페이지(result.html)로 이동하면서 데이터 전달
-            const queryParams = new URLSearchParams({ predictions: JSON.stringify(data.predictions) });
-            window.location.href = `/result.html?${queryParams.toString()}`;
+        .then(html => {
+            console.log("📥 서버에서 받은 HTML 응답");
+            document.open();  // ✅ 브라우저의 현재 문서 열기
+            document.write(html);  // ✅ 받은 HTML을 브라우저에 렌더링
+            document.close();  // ✅ 문서 닫기
         })
         .catch(error => {
             console.error("❌ 파일 예측 중 오류 발생:", error);
             alert("❌ 파일 예측 중 오류가 발생했습니다. 콘솔을 확인하세요.");
         });
     });
-});  // ✅ `document.addEventListener` 닫는 괄호
+}); 
 
 // 🔹 예측 결과 표시 함수 (표 형태) → `document.addEventListener` 바깥에 있어야 함!
 function displayResults(data) {

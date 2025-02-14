@@ -5,14 +5,21 @@ from app.models import Input, Prediction
 import pickle
 import pandas as pd
 import numpy as np
+import xgboost as xgb
+import os
 
 predict_bp = Blueprint('predict', __name__)
 
 # 모델 로드
 try:
-    model = pickle.load(open("model/model_0.83.pkl", "rb"))
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))  # `app/`의 상위 폴더로 이동
+    MODEL_PATH = os.path.join(BASE_DIR, "model", "final_model.json")  # 모델 경로 설정
+
+    # 🔹 모델 로드
+    model = xgb.XGBClassifier()
+    model.load_model(MODEL_PATH) 
 except FileNotFoundError:
-    raise RuntimeError("❌ 모델 파일을 찾을 수 없습니다. `model/model_0.81.pkl` 확인 필요.")
+    raise RuntimeError("❌ 모델 파일을 찾을 수 없습니다.")
 
 def get_user_id_from_token():
     """ JWT 토큰에서 user_id 추출 """
@@ -53,36 +60,62 @@ def preprocess(df):
         sample['결측치개수'] = sample2['결측치개수']
         
         train_medians = pd.read_csv('./saved/train_medians.csv')
-
+        train_medians_dict = train_medians.set_index("column_name")["median_value"].to_dict()  # train_medians가 DataFrame이라면 변환
+        
         # 수치형 컬럼만 추출
         numeric_cols = [col for col in sample.select_dtypes(include=['number']).columns]
-        sample[numeric_cols] = sample[numeric_cols].fillna(train_medians)
-
+        sample[numeric_cols] = sample[numeric_cols].fillna(sample[numeric_cols].apply(lambda col: train_medians_dict.get(col.name, col.median())))
+        
         # 스케일러 및 KNN 모델 로드
         scaler = pickle.load(open("./saved/scaler.pkl", "rb"))
         knn_hc = pickle.load(open("./saved/knn_hc.pkl", "rb"))
-
+        knn_dbscan = pickle.load(open("./saved/knn_dbscan.pkl", "rb"))
         X_test = sample[['전용면적', '방수', '욕실수']]
-        if X_test.isnull().values.any():
-            raise ValueError("❌ 예측에 필요한 필수 컬럼에 결측치가 있습니다.")
-
         X_test_scaled = scaler.transform(X_test)
-        sample["매물_HC"] = knn_hc.predict(X_test_scaled)
+        
+        try:
+            print("🔍 X_test 데이터 샘플:\n", X_test.head())  # X_test 원본 데이터 확인
+            print("🔍 X_test 데이터 형태:", X_test.shape)  # X_test 차원 확인
+            print("🔍 결측값 확인 (X_test):", X_test.isnull().sum().sum())  # 결측값 개수 확인
+            print("🔍 무한대값 확인 (X_test):", np.isinf(X_test).sum().sum())  # 무한대값 개수 확인
 
+            print("🔍 스케일러 객체 타입:", type(scaler))
+            print("🔍 스케일러 정보:", scaler)  # 스케일러가 올바르게 로드되었는지 확인
+
+            X_test_scaled = scaler.transform(X_test)  # 스케일링 수행
+
+            print("✅ X_test_scaled 샘플:\n", X_test_scaled[:5])  # 스케일링 후 일부 데이터 출력
+            print("✅ X_test_scaled 데이터 형태:", X_test_scaled.shape)  # 변환 후 차원 확인
+            print("✅ KNN 모델이 기대하는 입력 차원:", knn_hc._fit_X.shape)  # 학습된 KNN 모델 차원 확인
+
+            # KNN 예측 수행
+            sample["매물_HC"] = knn_hc.predict(X_test_scaled)
+            print("🎯 KNN 예측 완료! 첫 번째 예측 값:", sample["매물_HC"].iloc[0])
+            
+        except ValueError as ve:
+            raise ValueError(f"🚨 KNN 예측 중 오류 발생 (ValueError): {str(ve)}")
+        except AttributeError as ae:
+            raise ValueError(f"🚨 KNN 예측 중 오류 발생 (AttributeError): {str(ae)}")
+        except Exception as e:
+            raise ValueError(f"🚨 KNN 예측 중 오류 발생: {str(e)}")
+
+        sample["매물_DBSCAN"] = knn_dbscan.predict(X_test_scaled)
+        
         # 금액 단위 변환
         # sample["보증금"] = sample["보증금"] / 10000
         # sample["월세"] = sample["월세"] / 10000
+        
         sample['월세+관리비'] = sample['월세'] + sample['관리비']
         sample['보증금_월세관리비_비율'] = sample['월세+관리비'] / sample['보증금']
         sample['전용면적_가격_비율'] = sample['보증금_월세관리비_비율'] / sample['전용면적']
-
+        
         scaler2 = pickle.load(open("./saved/scaler2.pkl", "rb"))
         knn_kmedoids = pickle.load(open("./saved/knn_kmedoids.pkl", "rb"))
-
-        X_test2 = sample[['매물_HC', '전용면적_가격_비율', '보증금_월세관리비_비율']]
+        
+        X_test2 = sample[['매물_HC', '매물_DBSCAN', '전용면적_가격_비율', '보증금_월세관리비_비율']]
         X_test_scaled2 = scaler2.transform(X_test2)
+        
         sample["지역_KMedoids"] = knn_kmedoids.predict(X_test_scaled2)
-
         sample['게재일'] = pd.to_datetime(sample['게재일'], errors='coerce')
         sample['계절'] = sample['게재일'].dt.month.apply(get_season)
 
@@ -90,7 +123,10 @@ def preprocess(df):
         sample['매물_등록_경과일'] = (date_max - sample['게재일']).dt.days
 
         sample = pd.get_dummies(sample, columns=['매물확인방식', '방향', '주차가능여부', '계절'], drop_first=True)
-
+        sample = sample.drop(columns = ['ID', '중개사무소', '제공플랫폼', '게재일', '매물_DBSCAN', '월세+관리비', '보증금_월세관리비_비율'], axis = 1)
+        sample = pd.get_dummies(sample, columns=['매물_HC', '지역_KMedoids'], drop_first=True)
+        one_hot_columns = [col for col in sample.columns if 'HC' in col or 'KMedoids' in col]
+        sample[one_hot_columns] = sample[one_hot_columns].astype(int)
         return sample
     except Exception as e:
         raise ValueError(f"🚨 데이터 전처리 중 오류 발생: {str(e)}")
@@ -137,17 +173,13 @@ def predict():
 @predict_bp.route("/predict/file", methods=["POST"])
 def predict_file():
     """ CSV 파일을 업로드하여 다중 예측 수행 """
-    ##############################################
     user_id, error_response = get_user_id_from_token()
     if error_response:
         return error_response
-    
-    # ✅ 파일 업로드 체크 로직 추가
-    if "file" not in request.files:
-        return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
-
+    print("🔍 서버에서 받은 파일 목록:", request.files)
     file = request.files.get("file")
-    
+    print("📂 업로드된 파일:", file)
+    ####################이 위까지만 실행됨
     if file is None:
         return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
 
@@ -156,14 +188,15 @@ def predict_file():
 
     if not file.filename.endswith(".csv"):
         return jsonify({"error": "CSV 파일만 업로드할 수 있습니다."}), 400
-    
+    print("여기까지 수행됨")
     try:
         df = pd.read_csv(file)
-
+        print("df 데이터 프레임 생성!!!!!!!!!")
         # 데이터 전처리 수행
         preprocessed_df = preprocess(df)
-
+        print("df 데이터 전처리 완료 !!!!!!!!!")
         predictions = model.predict(preprocessed_df)
+        print("df 모델 예측 완료 !!!!!!!!!")
         pred_proba = model.predict_proba(preprocessed_df)
         correct_probs = pred_proba[np.arange(len(predictions)), predictions]
         confidence_scores = (correct_probs * 100).round(1)
