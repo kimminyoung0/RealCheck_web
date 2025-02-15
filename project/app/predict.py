@@ -7,6 +7,9 @@ import pandas as pd
 import numpy as np
 import xgboost as xgb
 import os
+import json
+import random
+import string
 
 predict_bp = Blueprint('predict', __name__)
 
@@ -100,7 +103,6 @@ def preprocess(df):
             raise ValueError(f"🚨 KNN 예측 중 오류 발생: {str(e)}")
 
         sample["매물_DBSCAN"] = knn_dbscan.predict(X_test_scaled)
-        
         # 금액 단위 변환
         # sample["보증금"] = sample["보증금"] / 10000
         # sample["월세"] = sample["월세"] / 10000
@@ -116,12 +118,13 @@ def preprocess(df):
         X_test_scaled2 = scaler2.transform(X_test2)
         
         sample["지역_KMedoids"] = knn_kmedoids.predict(X_test_scaled2)
+    
         sample['게재일'] = pd.to_datetime(sample['게재일'], errors='coerce')
         sample['계절'] = sample['게재일'].dt.month.apply(get_season)
-
+        
         date_max = pickle.load(open("./saved/date_max.pkl", "rb"))
         sample['매물_등록_경과일'] = (date_max - sample['게재일']).dt.days
-
+        
         sample = pd.get_dummies(sample, columns=['매물확인방식', '방향', '주차가능여부', '계절'], drop_first=True)
         sample = sample.drop(columns = ['ID', '중개사무소', '제공플랫폼', '게재일', '매물_DBSCAN', '월세+관리비', '보증금_월세관리비_비율'], axis = 1)
         sample = pd.get_dummies(sample, columns=['매물_HC', '지역_KMedoids'], drop_first=True)
@@ -130,6 +133,13 @@ def preprocess(df):
         return sample
     except Exception as e:
         raise ValueError(f"🚨 데이터 전처리 중 오류 발생: {str(e)}")
+
+def generate_random_id():
+    """랜덤한 4자리 문자 + 6자리 숫자로 이루어진 ID 생성"""
+    letters = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))  # 대문자 + 숫자 4자리
+    numbers = ''.join(random.choices(string.digits, k=6))  # 숫자 6자리
+    return f"{letters}{numbers}"
+
 
 def make_prediction(input_data):
     try:
@@ -146,40 +156,87 @@ def make_prediction(input_data):
 #predict url로 POST 요청이 들어오면 predict()메서드를 수행하겠다는 의미
 @predict_bp.route("/predict", methods=["POST"])
 def predict():
-    """ JSON 입력을 받아서 단일 예측 수행 """
+    """ JSON 입력을 받아 단일 예측 수행 및 DB 저장 """
     user_id, error_response = get_user_id_from_token()
     if error_response:
         return error_response  # 인증 실패 시 에러 반환
-    
+
     data = request.json
+    print("🔍입력 받은 data", data)
+    if not data:
+        return jsonify({"error": "입력 데이터가 제공되지 않았습니다."}), 400
 
     try:
-        prediction_result, percent_probs_mean = make_prediction(data)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        df = pd.DataFrame([data])  # JSON 데이터를 DataFrame으로 변환
+        print("df 데이터 프레임 생성!!!!!!!!!2")
+        df['ID'] = generate_random_id() ############추후에 user_id값과 랜덤숫자의조합으로 만들기
+        print(df)
+        # 데이터 전처리 수행
+        preprocessed_df = preprocess(df)
+        print("df 데이터 전처리 완료 !!!!!!!!!")
+    
+        if preprocessed_df.isna().sum().sum() > 0:
+            print("🚨 전처리 후에도 NaN이 남아 있음")
+            print(preprocessed_df.isna().sum())
+            
+        preprocessed_df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
+        preprocessed_df.fillna(0, inplace=True)  # NaN을 0으로 변환
+        print("변환완료!!!!!!!!!!!")
+        # 예측 수행
+        predictions = model.predict(preprocessed_df)
+        print("df 모델 예측 완료 !!!!!!!!!")
 
-    new_input = Input(user_id=user_id, input_data=data)
-    db.session.add(new_input)
-    db.session.commit()
+        # 예측 확률 계산
+        pred_proba = model.predict_proba(preprocessed_df)
+        correct_probs = pred_proba[np.arange(len(predictions)), predictions]
+        confidence_scores = (correct_probs * 100).round(1).astype(float)
 
-    new_prediction = Prediction(input_id=new_input.id, 
-                                prediction_result=prediction_result, 
-                                percent_probs_mean=percent_probs_mean)
-    db.session.add(new_prediction)
-    db.session.commit()
+        # 예측 결과 변환
+        prediction_labels = ["허위매물이 아닙니다" if pred == 0 else "허위매물입니다" for pred in predictions]
+        print("prediction_labels :", prediction_labels)
+        # DB에 입력 데이터 저장
+        df = df.where(pd.notna(df), None)
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
+        df.fillna('-', inplace=True)  # NaN을 0으로 변환
+        
+        json_data = json.dumps(df.to_dict(orient="records"), allow_nan = False)
+        new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
+        
+        # DB에 입력 데이터 저장
+        #new_input = Input(user_id=user_id, input_data=data)
+        db.session.add(new_input)
+        db.session.commit()
 
-    return jsonify({"prediction": prediction_result, "pred_proba": percent_probs_mean})
+        # DB에 예측 결과 저장
+        new_prediction = Prediction(input_id=new_input.id, 
+                                    prediction_result=prediction_labels, 
+                                    confidence=confidence_scores)
+        db.session.add(new_prediction)
+        db.session.commit()
+
+        result_df = df.copy()
+        result_df["예측 결과"] = prediction_labels
+        result_df["신뢰도 (%)"] = confidence_scores
+
+        result_html = result_df.to_html(classes="table table-striped", index=False)
+        print("predict.py의 predict() 메서드 모두 완료")
+
+        return render_template("result.html", table=result_html)
+
+    except Exception as e:
+        return jsonify({"error": "예측 실패", "message": str(e)}), 400
+
 
 @predict_bp.route("/predict/file", methods=["POST"])
 def predict_file():
-    """ CSV 파일을 업로드하여 다중 예측 수행 """
+    """ CSV 파일을 업로드하여 다중 예측 수행 및 DB 저장 """
     user_id, error_response = get_user_id_from_token()
     if error_response:
         return error_response
     print("🔍 서버에서 받은 파일 목록:", request.files)
     file = request.files.get("file")
     print("📂 업로드된 파일:", file)
-    ####################이 위까지만 실행됨
+
     if file is None:
         return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
 
@@ -188,21 +245,54 @@ def predict_file():
 
     if not file.filename.endswith(".csv"):
         return jsonify({"error": "CSV 파일만 업로드할 수 있습니다."}), 400
-    print("여기까지 수행됨")
+
     try:
         df = pd.read_csv(file)
-        print("df 데이터 프레임 생성!!!!!!!!!")
+        print("df 데이터 프레임 생성1")
+
         # 데이터 전처리 수행
         preprocessed_df = preprocess(df)
         print("df 데이터 전처리 완료 !!!!!!!!!")
+        
+        if preprocessed_df.isna().sum().sum() > 0:
+            print("🚨 전처리 후에도 NaN이 남아 있음")
+            print(preprocessed_df.isna().sum())
+        
+        preprocessed_df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
+        preprocessed_df.fillna(0, inplace=True)  # NaN을 0으로 변환
+
+
+        # 예측 수행
         predictions = model.predict(preprocessed_df)
         print("df 모델 예측 완료 !!!!!!!!!")
-        
+
+        # 예측 확률 계산
         pred_proba = model.predict_proba(preprocessed_df)
         correct_probs = pred_proba[np.arange(len(predictions)), predictions]
-        confidence_scores = (correct_probs * 100).round(1)
+        confidence_scores = (correct_probs * 100).round(1).astype(float)
 
+        # 예측 결과 변환
         prediction_labels = ["허위매물이 아닙니다" if pred == 0 else "허위매물입니다" for pred in predictions]
+
+        # DB에 입력 데이터 저장
+        df = df.where(pd.notna(df), None)
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
+        df.fillna('-', inplace=True)  # NaN을 0으로 변환
+
+        json_data = json.dumps(df.to_dict(orient="records"), allow_nan = False)
+        new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
+
+        db.session.add(new_input)
+        db.session.commit()
+
+        # DB에 예측 결과 저장
+        for pred, conf in zip(prediction_labels, confidence_scores):
+            new_prediction = Prediction(input_id=new_input.id, 
+                                        prediction_result=pred, 
+                                        confidence=conf)
+            db.session.add(new_prediction)
+
+        db.session.commit()
 
         result_df = df.copy()
         result_df["예측 결과"] = prediction_labels
@@ -210,6 +300,7 @@ def predict_file():
 
         result_html = result_df.to_html(classes="table table-striped", index=False)
         print("predict.py의 predict_file() 메서드 모두 완료")
+
         return render_template("result.html", table=result_html)
 
     except Exception as e:

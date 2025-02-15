@@ -16,6 +16,14 @@
 <!-- 직접 입력 폼 -->
 <form id="predict-form" enctype="multipart/form-data">
     <div class="input-group">
+        <label>매물확인방식:</label>
+        <select name="매물확인방식">
+            <option value="서류확인">서류확인</option>
+            <option value="방문확인">방문확인</option>
+            <option value="전화확인">전화확인</option>
+        </select>
+    </div>
+    <div class="input-group">
         <label>월세(단위 만원):</label>
         <input type="number" name="월세" placeholder="예: 50">
     </div>
@@ -92,8 +100,8 @@
     </div>
 
     <div class="input-group">
-        <label for="게재일자">게재일자:</label>
-        <input type="date" id = "게재일자" name="게재일자" required>
+        <label for="게재일">게재일:</label>
+        <input type="date" id = "게재일" name="게재일" required>
     </div>
 
     <button type="submit">예측하기</button>

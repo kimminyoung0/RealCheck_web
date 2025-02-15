@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
         event.preventDefault();
 
         let formData = {
+            "매물확인방식": document.querySelector('select[name="매물확인방식"]').value,
             "월세": parseFloat(document.querySelector('input[name="월세"]').value),
             "보증금": parseFloat(document.querySelector('input[name="보증금"]').value),
             "관리비": parseFloat(document.querySelector('input[name="관리비"]').value),
@@ -62,7 +63,7 @@ document.addEventListener("DOMContentLoaded", function () {
             "주차가능여부": document.querySelector('select[name="주차가능여부"]').value,
             "제공플랫폼": document.querySelector('input[name="제공플랫폼"]').value,
             "중개사무소": document.querySelector('input[name="중개사무소"]').value,
-            "게재일자": document.querySelector('input[name="게재일자"]').value + " 00:00:00"
+            "게재일": document.querySelector('input[name="게재일"]').value + " 00:00:00"
         };
 
         fetch("/predict", {
