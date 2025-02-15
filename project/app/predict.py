@@ -197,6 +197,7 @@ def predict_file():
         print("df 데이터 전처리 완료 !!!!!!!!!")
         predictions = model.predict(preprocessed_df)
         print("df 모델 예측 완료 !!!!!!!!!")
+        
         pred_proba = model.predict_proba(preprocessed_df)
         correct_probs = pred_proba[np.arange(len(predictions)), predictions]
         confidence_scores = (correct_probs * 100).round(1)
@@ -208,7 +209,7 @@ def predict_file():
         result_df["신뢰도 (%)"] = confidence_scores
 
         result_html = result_df.to_html(classes="table table-striped", index=False)
-
+        print("predict.py의 predict_file() 메서드 모두 완료")
         return render_template("result.html", table=result_html)
 
     except Exception as e:

@@ -1,7 +1,11 @@
 document.addEventListener("DOMContentLoaded", function () {
     const manualForm = document.getElementById("predict-form");  // 직접 입력 폼
     const fileForm = document.getElementById("upload-form");  // 파일 업로드 폼
-    const resultDiv = document.getElementById("result");
+    //const resultDiv = document.getElementById("result");
+    if (!manualForm || !fileForm) {
+        console.log("📌 predict.html이 아니라서 manualForm과 fileForm을 찾을 필요 없음.");
+        return; // `predict.html`이 아니면 실행하지 않음
+    }
     const fileInput = document.getElementById("file-input");
     const manualBtn = document.getElementById("manual-btn");
     const fileBtn = document.getElementById("file-btn");

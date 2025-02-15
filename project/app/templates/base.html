@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}RealCheck{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- 🔹 predict.html에서만 script.js를 로드 -->
+    {% if "predict" in request.path %}
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+    {% endif %}
 </head>
 <body>
     <header>
