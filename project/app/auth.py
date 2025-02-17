@@ -14,6 +14,7 @@ def register():
     data = request.json
     email = data.get("email")
     password = data.get("password")
+    next_page = data.get("next", "/")
 
     # 중복 이메일 검사
     if User.query.filter_by(email=email).first():
@@ -24,8 +25,10 @@ def register():
 
     db.session.add(new_user)
     db.session.commit()
+    
+    print("✅ 회원가입 완료, 다음 페이지로 이동:", next_page)  # 🔥 로그 찍기
 
-    return jsonify({"message": "회원가입 성공!"}), 201
+    return jsonify({"message": "회원가입 성공!", "next": next_page}), 201
 
 # 로그인 API
 @auth_bp.route('/login', methods=['POST'])
@@ -34,6 +37,7 @@ def login():
     data = request.json
     email = data.get("email")
     password = data.get("password")
+    next_page = data.get("next", "/")  # 기본적으로 홈으로 이동
 
     user = User.query.filter_by(email=email).first()
 

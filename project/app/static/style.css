@@ -200,6 +200,25 @@ input:focus, select:focus {
   color: white;
 }
 
+.toggle-btn2 {
+  background-color: #4F7942; /* 기존 버튼과 같은 색상 */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.toggle-btn2:hover {
+  background-color: #3A5F2D; /* hover 시 색상 변경 */
+}
+
+.toggle-btn2.active {
+  background-color: #2E4A21;
+}
+
 /* 🔹 입력 필드와 라벨 한 줄 정렬 */
 .input-group {
   display: flex;

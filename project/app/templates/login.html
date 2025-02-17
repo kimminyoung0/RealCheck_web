@@ -5,9 +5,52 @@
 {% block content %}
 <h1>로그인</h1>
 <form id="login-form">
+    <input type="hidden" name="next" id="next" value="">
     <label>이메일: <input type="email" name="email" required></label><br>
     <label>비밀번호: <input type="password" name="password" required></label><br>
     <button type="submit">로그인</button>
 </form>
 <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
+<script>
+    // 사용자가 어디서 로그인 페이지로 왔는지 추적
+    const params = new URLSearchParams(window.location.search);
+    const nextPage = params.get("next") || "/";
+    document.getElementById('next').value = nextPage;
+    console.log("login.html의 script 코드 실행되는지 확인")
+
+    document.getElementById("login-form").addEventListener("submit", async function(event) {
+        event.preventDefault(); // 기본 폼 제출 방지
+
+        const formData = new FormData(this);
+        const email = formData.get("email");
+        const password = formData.get("password");
+        const next = formData.get("next");
+        
+        console.log("로그인 요청 데이터:", { email, password, next });
+        try {
+            const response = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password, next })
+            });
+
+            const result = await response.json();
+            console.log("로그인 응답 데이터:", result); // 🔥 응답 확인
+
+            if (response.ok) {
+                localStorage.setItem("token", result.token); // JWT 저장
+                window.location.href = result.next; // 로그인 성공 후 해당 페이지로 이동
+            } else {
+                alert(result.message);
+            }
+        } catch (error) {
+            console.error("로그인 오류 발생:", error);
+            alert("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+        }
+    });
+</script>
+{% endblock %}
+
+{% block scripts %}
+
 {% endblock %}
