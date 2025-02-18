@@ -180,33 +180,53 @@ def predict():
         predictions = model.predict(preprocessed_df)
         print("df 모델 예측 완료 !!!!!!!!!")
 
-        # 예측 확률 계산
-        pred_proba = model.predict_proba(preprocessed_df)
-        correct_probs = pred_proba[np.arange(len(predictions)), predictions]
-        confidence_scores = (correct_probs * 100).round(1).astype(float)
-
-        # 예측 결과 변환
-        prediction_labels = ["허위매물이 아닙니다" if pred == 0 else "허위매물입니다" for pred in predictions]
-        print("prediction_labels :", prediction_labels)
-        # DB에 입력 데이터 저장
-        df = df.where(pd.notna(df), None)
-        df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
-        df.fillna('-', inplace=True)  # NaN을 0으로 변환
+        print("이 함수가 실행되는거 맞ㅈ니........")
+        try:
+            print("try문 들어옴.......")
+            # 예측 확률 계산
+            pred_proba = model.predict_proba(preprocessed_df)
+            print("pred_proba : ", pred_proba)
+            # 차원 문제 해결
+            predictions = np.array(predictions).flatten()  # 1차원 배열로 변환
+            print("predictions : ", predictions)
+            correct_probs = pred_proba[np.arange(len(predictions)), predictions]  # 안전한 인덱싱
+            print("correct_probs : ", correct_probs)
+            confidence_scores = (correct_probs * 100).round(1).astype(float)
+            print("confidence_scores : ", confidence_scores)
+            # 예측 결과 변환
+            prediction_labels = ["허위매물이 아닙니다" if pred == 0 else "허위매물입니다" for pred in predictions]
+        except Exception as e:
+            print("🚨 예측 과정에서 오류 발생:", str(e))
+            import traceback
+            traceback.print_exc()  # 상세한 오류 로그 출력
+            return "예측 중 오류 발생: " + str(e), 400 
         
-        json_data = json.dumps(df.to_dict(orient="records"), allow_nan = False)
-        new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
-        
-        # DB에 입력 데이터 저장
-        #new_input = Input(user_id=user_id, input_data=data)
-        db.session.add(new_input)
-        db.session.commit()
+        try:
+            # DB에 입력 데이터 저장
+            df = df.where(pd.notna(df), None)
+            df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
+            df.fillna('-', inplace=True)  # NaN을 0으로 변환
 
-        # DB에 예측 결과 저장
-        new_prediction = Prediction(input_id=new_input.id, 
-                                    prediction_result=prediction_labels, 
-                                    confidence=confidence_scores)
-        db.session.add(new_prediction)
-        db.session.commit()
+            json_data = json.dumps(df.to_dict(orient="records"), allow_nan = False)
+            new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
+
+            db.session.add(new_input)
+            db.session.commit()
+
+            # DB에 예측 결과 저장
+            for pred, conf in zip(prediction_labels, confidence_scores):
+                new_prediction = Prediction(input_id=new_input.id, 
+                                            prediction_result=pred, 
+                                            confidence=conf)
+                db.session.add(new_prediction)
+
+            db.session.commit()
+        except Exception as e:
+            print("🚨 DB 저장 과정에서 오류 발생:", str(e))
+            import traceback
+            traceback.print_exc()  # 상세한 오류 로그 출력
+            return "DB 저장 중 오류 발생: " + str(e), 400 
+        
 
         result_df = df.copy()
         result_df["예측 결과"] = prediction_labels

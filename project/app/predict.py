@@ -230,39 +230,44 @@ def generate_random_id():
     return f"{letters}{numbers}"
 
 
-# def make_prediction(input_data):
-#     try:
-#         df = pd.DataFrame([input_data])
-#         preprocessed_df = preprocess(df)
-#         prediction = model.predict(preprocessed_df)
-#         pred_proba = model.predict_proba(preprocessed_df)
-#         correct_probs = pred_proba[np.arange(len(prediction)), prediction]
-#         percent_probs_mean = (correct_probs * 100).round(1).mean()
-#         return prediction, percent_probs_mean
-#     except Exception as e:
-#         raise ValueError(f"🚨 예측 중 오류 발생: {str(e)}")
-
 #predict url로 POST 요청이 들어오면 predict()메서드를 수행하겠다는 의미
 @predict_bp.route("/predict", methods=["POST"])
 def predict():
-    """ JSON 입력을 받아 단일 예측 수행 및 DB 저장 """
+    """ 단일 예측 수행 및 DB 저장 """
     user_id, error_response = get_user_id_from_token()
     if error_response:
         return error_response  # 인증 실패 시 에러 반환
+    
+    print("user_id:", user_id)
 
-    data = request.json
-    print("🔍입력 받은 data", data)
-    if not data:
-        return jsonify({"error": "입력 데이터가 제공되지 않았습니다."}), 400
+    """ FormData 입력을 받아서 예측 수행 """
+    data = {
+        "매물확인방식": request.form.get("매물확인방식"),
+        "월세": float(request.form.get("월세", 0)),
+        "보증금": float(request.form.get("보증금", 0)),
+        "관리비": float(request.form.get("관리비", 0)),
+        "전용면적": float(request.form.get("전용면적", 0)),
+        "방수": int(request.form.get("방수", 0)),
+        "욕실수": int(request.form.get("욕실수", 0)),
+        "방향": request.form.get("방향"),
+        "해당층": int(request.form.get("해당층", 0)),
+        "총층": int(request.form.get("총층", 0)),
+        "총주차대수": int(request.form.get("총주차대수", 0)),
+        "주차가능여부": request.form.get("주차가능여부"),
+        "제공플랫폼": request.form.get("제공플랫폼"),
+        "중개사무소": request.form.get("중개사무소"),
+        "게재일": request.form.get("게재일") + " 00:00:00" if request.form.get("게재일") else None
+    }
+
 
     try:
         df = pd.DataFrame([data])  # JSON 데이터를 DataFrame으로 변환
-        print("df 데이터 프레임 생성!!!!!!!!!2")
+        print("✅ 단일 입력값 데이터 프레임 생성")
         df['ID'] = generate_random_id() ############추후에 user_id값과 랜덤숫자의조합으로 만들기
         print(df)
         # 데이터 전처리 수행
         preprocessed_df = preprocess_for_one(df)
-        print("df 데이터 전처리 완료 !!!!!!!!!")
+        print("✅ 단일 입력값 데이터 전처리 완료")
     
         if preprocessed_df.isna().sum().sum() > 0:
             print("🚨 전처리 후에도 NaN이 남아 있음")
@@ -284,7 +289,7 @@ def predict():
         pred_proba = model.predict_proba(preprocessed_df)
         correct_probs = pred_proba[np.arange(len(predictions)), predictions]
         confidence_scores = (correct_probs * 100).round(1).astype(float).tolist()
-
+        print("confidence_scores : ", confidence_scores)
         # 예측 결과 변환
         prediction_labels = ["허위매물이 아닙니다" if pred == 0 else "허위매물입니다" for pred in predictions]
         print("prediction_labels :", prediction_labels)
@@ -295,7 +300,7 @@ def predict():
         if isinstance(prediction_labels, str):  # 단일 값이면 리스트로 변환
             prediction_labels = [prediction_labels]
 
-        # DB에 입력 데이터 저장
+        # DB에 입력 데이터 저장하기 전 전처리
         #df = df.where(pd.notna(df), None)
         df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
         df.fillna('-', inplace=True)  # NaN을 0으로 변환
@@ -316,8 +321,8 @@ def predict():
         db.session.commit()
 
         result_df = df.copy()
-        result_df["예측 결과"] = prediction_labels
-        result_df["신뢰도 (%)"] = confidence_scores
+        result_df["예측 결과"] = prediction_labels[0]
+        result_df["신뢰도 (%)"] = confidence_scores[0]
 
         result_html = result_df.to_html(classes="table table-striped", index=False)
         print("predict.py의 predict() 메서드 모두 완료")
@@ -335,6 +340,8 @@ def predict_file():
     user_id, error_response = get_user_id_from_token()
     if error_response:
         return error_response
+    
+    print("user_id:", user_id)
     
     print("🔍 서버에서 받은 파일 목록:", request.files)
     file = request.files.get("file")

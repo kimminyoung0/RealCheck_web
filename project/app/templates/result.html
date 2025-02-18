@@ -4,10 +4,14 @@
 <h1>🏠 예측 결과</h1>
 
 <!-- ✅ Flask에서 전달된 예측 결과 테이블을 그대로 표시 -->
-{{ table | safe }}
 
-<button onclick="goBack()">⬅ 뒤로 가기</button>
+<div class="table-container">
+    {{ table | safe }}
+</div>
 
+<div class="button-container">
+    <button class = "goback" onclick="goBack()">⬅ 뒤로 가기</button>
+</div>
 <script>
     function goBack() {
         window.history.back();
