@@ -2,6 +2,7 @@ flask
 flask-sqlalchemy
 flask-bcrypt
 flask-jwt-extended
+flask-migrate
 psycopg2
 pandas==2.2.3
 scikit-learn==1.4.1post1

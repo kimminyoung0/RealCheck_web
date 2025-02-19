@@ -304,14 +304,27 @@ def predict():
         #df = df.where(pd.notna(df), None)
         df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
         df.fillna('-', inplace=True)  # NaN을 0으로 변환
-        json_data = json.dumps(df.to_dict(orient="records"), allow_nan = False)
+        json_data = json.dumps(df.to_dict(orient="records"), ensure_ascii=False, allow_nan=False)
+
         
         # DB에 입력 데이터 저장
         new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
         #new_input = Input(user_id=user_id, input_data=data)
         
-        db.session.add(new_input)
-        db.session.commit()
+        # db.session.add(new_input)
+        # db.session.commit()
+        
+        try:
+            db.session.add(new_input)
+            db.session.commit()
+            db.session.refresh(new_input)
+            print("✅ 입력 데이터 DB 저장 성공")
+            print("🛠 현재 세션에 추가된 객체:", db.session.new)
+        except Exception as e:
+            db.session.rollback() #트랜잭션 롤백해서 트랜잭션을 깨끗하게 정리
+            print(f"❌ 입력 데이터 저장 실패: {e}")
+        finally:
+            db.session.close() 
 
         # DB에 예측 결과 저장
         new_prediction = Prediction(input_id=new_input.id, 
@@ -393,12 +406,25 @@ def predict_file():
         #df = df.where(pd.notna(df), None)
         df.replace([np.inf, -np.inf], np.nan, inplace=True)
         df.fillna('-', inplace=True)
+        #json_data = json.dumps(df.to_dict(orient="records"), ensure_ascii=False, allow_nan=False)
         json_data = json.dumps(df.to_dict(orient="records"), ensure_ascii=False, allow_nan=False)
 
         # DB에 입력 데이터 저장
         new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
-        db.session.add(new_input)
-        db.session.commit()
+        
+        # db.session.add(new_input)
+        # db.session.commit()
+        try:
+            db.session.add(new_input)
+            db.session.commit()
+            db.session.refresh(new_input)
+            print("🛠 현재 세션에 추가된 객체:", db.session.new)
+            print("✅ 입력 데이터 DB 저장 성공")
+        except Exception as e:
+            db.session.rollback() #트랜잭션 롤백해서 트랜잭션을 깨끗하게 정리
+            print(f"❌ 입력 데이터 저장 실패: {e}")
+        finally:
+            db.session.close() 
 
         # ✅ DB에 예측 결과 저장 (ARRAY 타입을 지원하면 변환 없이 저장)
         new_prediction = Prediction(
@@ -406,8 +432,15 @@ def predict_file():
             prediction_result=prediction_labels,  # ✅ JSON 컬럼이면 json.dumps() 필요
             confidence=confidence_scores  # ✅ 리스트 그대로 저장
         )
-        db.session.add(new_prediction)
-        db.session.commit()
+        try:
+            db.session.add(new_prediction)
+            db.session.commit()
+            print("✅ 예측 데이터 DB 저장 성공")
+        except Exception as e:
+            db.session.rollback() #트랜잭션 롤백해서 트랜잭션을 깨끗하게 정리
+            print(f"❌ 예측 데이터 저장 실패: {e}")
+        finally:
+            db.session.close() 
 
         # 결과 데이터프레임 생성
         result_df = df.copy()
