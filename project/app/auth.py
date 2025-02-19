@@ -18,14 +18,22 @@ def register():
 
     # 중복 이메일 검사
     if User.query.filter_by(email=email).first():
+        print(f"🔍 회원가입 시도 - 이미 가입된 이메일 : {email}")
         return jsonify({"message": "이미 가입된 이메일입니다."}), 400
 
     hashed_password = generate_password_hash(password)  # 비밀번호 해싱
+    print(f"✅ 생성된 해시: {hashed_password}")
     new_user = User(email=email, password=hashed_password)
 
-    db.session.add(new_user)
-    db.session.commit()
-    
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback() #트랜잭션 롤백해서 트랜잭션을 깨끗하게 정리
+        print(f"❌ user 데이터 저장 실패: {e}")
+    finally:
+        db.session.close() 
+
     print("✅ 회원가입 완료, 다음 페이지로 이동:", next_page)  # 🔥 로그 찍기
 
     return jsonify({"message": "회원가입 성공!", "next": next_page}), 201
@@ -42,6 +50,7 @@ def login():
     user = User.query.filter_by(email=email).first()
 
     if not user or not check_password_hash(user.password, password):
+        print(f"❌ 비밀번호 검증 실패: 입력된 비밀번호: {password}, 저장된 해시: {user.password}")
         return jsonify({"message": "이메일 또는 비밀번호가 올바르지 않습니다."}), 401
 
     token = jwt.encode(
@@ -52,5 +61,5 @@ def login():
         app.config["SECRET_KEY"],
         algorithm="HS256"
     )
-
+    print(f"✅ 토큰 발급 성공: {token}")  # 🔥 로그 추가
     return jsonify({"token": token})
