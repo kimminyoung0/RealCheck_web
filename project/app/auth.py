@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 from app import app, db
-from app.models import User
+from app.models import Users
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -12,18 +12,21 @@ auth_bp = Blueprint('auth', __name__)
 def register():
     """ 회원가입 API (중복 이메일 체크 포함) """
     data = request.json
+    data = request.get_json()
+    if not data:
+        return jsonify({"message": "잘못된 요청입니다. JSON 데이터를 보내주세요."}), 400
     email = data.get("email")
     password = data.get("password")
     next_page = data.get("next", "/")
 
     # 중복 이메일 검사
-    if User.query.filter_by(email=email).first():
+    if Users.query.filter_by(email=email).first():
         print(f"🔍 회원가입 시도 - 이미 가입된 이메일 : {email}")
         return jsonify({"message": "이미 가입된 이메일입니다."}), 400
 
     hashed_password = generate_password_hash(password)  # 비밀번호 해싱
     print(f"✅ 생성된 해시: {hashed_password}")
-    new_user = User(email=email, password=hashed_password)
+    new_user = Users(email=email, password=hashed_password)
 
     try:
         db.session.add(new_user)
@@ -47,7 +50,7 @@ def login():
     password = data.get("password")
     next_page = data.get("next", "/")  # 기본적으로 홈으로 이동
 
-    user = User.query.filter_by(email=email).first()
+    user = Users.query.filter_by(email=email).first()
 
     if not user or not check_password_hash(user.password, password):
         print(f"❌ 비밀번호 검증 실패: 입력된 비밀번호: {password}, 저장된 해시: {user.password}")
@@ -58,7 +61,7 @@ def login():
             "user_id": user.id,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)  # 2시간 유효
         },
-        app.config["SECRET_KEY"],
+        app.config["SECRET"],
         algorithm="HS256"
     )
     print(f"✅ 토큰 발급 성공: {token}")  # 🔥 로그 추가

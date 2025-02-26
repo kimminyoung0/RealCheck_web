@@ -10,7 +10,11 @@
     <label>비밀번호: <input type="password" name="password" required></label><br>
     <button type="submit">로그인</button>
 </form>
+
+<div id="login-result" style="color: red;"></div>
+
 <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const loginForm = document.getElementById("login-form");
