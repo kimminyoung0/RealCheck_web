@@ -2,7 +2,6 @@
 
 # 부동산 허위매물 예측 웹 서비스
 --------------------------------------
-(아직 대회가 끝나면 EDA 및 DataPreprocessing, ModelTrain&Predict 코드도 올릴 예정입니다!)
 ## 🛠️ 기술 스택
 - **언어**: Python, JavaScript, SQL
 - **라이브러리**: Scikit-learn, XGBoost
