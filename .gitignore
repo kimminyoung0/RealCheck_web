@@ -1,0 +1,6 @@
+data/sub
+image
+catboost_info
+.DS_Store
+웹서비스를 위해 전처리에 필요한 모델 및 데이터 저장.ipynb
+.ipynb_checkpoints
