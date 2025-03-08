@@ -149,10 +149,6 @@ def preprocess_for_one(df):
 
         X_test_scaled = scaler.transform(X_test)  # 스케일링 수행
 
-        print("✅ X_test_scaled 샘플:\n", X_test_scaled[:5])  # 스케일링 후 일부 데이터 출력
-        print("✅ X_test_scaled 데이터 형태:", X_test_scaled.shape)  # 변환 후 차원 확인
-        print("✅ KNN 모델이 기대하는 입력 차원:", knn_hc._fit_X.shape)  # 학습된 KNN 모델 차원 확인
-
         # KNN 예측 수행
         sample["매물_HC"] = knn_hc.predict(X_test_scaled)
         
@@ -264,6 +260,7 @@ def predict():
         df = pd.DataFrame([data])  # JSON 데이터를 DataFrame으로 변환
         print("✅ 단일 입력값 데이터 프레임 생성")
         df['ID'] = generate_random_id() ############추후에 user_id값과 랜덤숫자의조합으로 만들기
+        df.insert(0, 'ID', df.pop('ID'))
         print(df)
         # 데이터 전처리 수행
         preprocessed_df = preprocess_for_one(df)
@@ -382,7 +379,7 @@ def predict_file():
             print(preprocessed_df.isna().sum())
         
         preprocessed_df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
-        preprocessed_df.fillna(0, inplace=True)  # NaN을 0으로 변환
+        preprocessed_df.fillna('-', inplace=True)  # NaN을 0으로 변환
 
         print("preprocessed_df : ", preprocessed_df)
         
