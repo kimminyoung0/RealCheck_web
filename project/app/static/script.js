@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const fileForm = document.getElementById("upload-form");  // 파일 업로드 폼
 
     if (!manualForm || !fileForm) {
-        console.log("📌 predict.html이 아니라서 실행할 필요 없음.");
         return;
     }
 
@@ -39,16 +38,16 @@ document.addEventListener("DOMContentLoaded", function () {
     function submitPrediction(url, formData) {
         fetch(url, {
             method: "POST",
-            body: formData  // ✅ FormData로 전송 (서버에서 JSON을 예상하지 않음)
+            body: formData  // FormData로 전송 (서버에서 JSON을 예상하지 않음)
         })
         .then(response => {
-            console.log("📥 서버 응답 상태 코드:", response.status);
-            return response.text();  // ✅ HTML을 받아서 처리
+            console.log("서버 응답 상태 코드:", response.status);
+            return response.text();  // HTML을 받아서 처리
         })
         .then(html => {
-            document.open();  // ✅ 브라우저의 현재 문서 열기
-            document.write(html);  // ✅ 받은 HTML을 브라우저에 렌더링
-            document.close();  // ✅ 문서 닫기
+            document.open();  // 브라우저의 현재 문서 열기
+            document.write(html);  // 받은 HTML을 브라우저에 렌더링
+            document.close();
         })
         .catch(error => {
             console.error("❌ 예측 중 오류 발생:", error);
@@ -56,28 +55,11 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 🔹 직접 입력 폼 제출 처리 (JSON 대신 FormData 사용)
+    // 🔹 직접 입력 폼 제출 처리
     manualForm.addEventListener("submit", function (event) {
-        event.preventDefault();
-
-        let formData = new FormData();
-        formData.append("매물확인방식", document.querySelector('select[name="매물확인방식"]').value);
-        formData.append("월세", document.querySelector('input[name="월세"]').value);
-        formData.append("보증금", document.querySelector('input[name="보증금"]').value);
-        formData.append("관리비", document.querySelector('input[name="관리비"]').value);
-        formData.append("전용면적", document.querySelector('input[name="전용면적"]').value);
-        formData.append("방수", document.querySelector('input[name="방수"]').value);
-        formData.append("욕실수", document.querySelector('input[name="욕실수"]').value);
-        formData.append("방향", document.querySelector('select[name="방향"]').value);
-        formData.append("해당층", document.querySelector('input[name="해당층"]').value);
-        formData.append("총층", document.querySelector('input[name="총층"]').value);
-        formData.append("총주차대수", document.querySelector('input[name="총주차대수"]').value);
-        formData.append("주차가능여부", document.querySelector('select[name="주차가능여부"]').value);
-        formData.append("제공플랫폼", document.querySelector('input[name="제공플랫폼"]').value);
-        formData.append("중개사무소", document.querySelector('input[name="중개사무소"]').value);
-        formData.append("게재일", document.querySelector('input[name="게재일"]').value + " 00:00:00");
-
-        submitPrediction("/predict", formData); // ✅ fetch 요청 실행
+        event.preventDefault(); //기본 동작 제출 방지
+        let formData = new FormData(manualForm); // 폼 데이터를 FormData 객체로 저장
+        submitPrediction("/input/one", formData); // fetch 요청 실행 (서버에 전송)
     });
 
     // 🔹 파일 업로드 폼 제출 처리 (FormData 사용)
@@ -92,6 +74,6 @@ document.addEventListener("DOMContentLoaded", function () {
         let formData = new FormData();
         formData.append("file", fileInput.files[0]);
 
-        submitPrediction("/predict/file", formData); // ✅ fetch 요청 실행
+        submitPrediction("/input/file", formData); // fetch 요청 실행
     });
 });

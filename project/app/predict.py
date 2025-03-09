@@ -28,17 +28,17 @@ def get_user_id_from_token():
     """ JWT 토큰에서 user_id 추출 """
     token = request.headers.get("Authorization")
     if not token:
-        return None, None  # ✅ 비회원이면 None 반환 (에러 X)
+        return None, None  # 비회원이면 None 반환
     try:
         decoded = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
-        return decoded["user_id"], None  # ✅ 로그인한 회원이면 user_id 반환
+        return decoded["user_id"], None  # 로그인한 회원이면 user_id 반환
     except jwt.ExpiredSignatureError:
-        return None, jsonify({"message": "Token expired"})  # ✅ 토큰 만료
+        return None, jsonify({"message": "Token expired"})  # 토큰 만료
     except jwt.InvalidTokenError:
-        return None, jsonify({"message": "Invalid token"})  # ✅ 잘못된 토큰
+        return None, jsonify({"message": "Invalid token"})  # 잘못된 토큰
 
 def get_season(month):
-    """ 월(month)에 따라 계절 반환 """
+    """ 데이터 전처리 중 일부 """
     if month in [3, 4, 5]:
         return '봄'
     elif month in [6, 7, 8]:
@@ -76,15 +76,10 @@ def preprocess_for_file(df):
         X_test = sample[['전용면적', '방수', '욕실수']]
         X_test_scaled = scaler.transform(X_test)
 
-        print("✅ X_test_scaled 샘플:\n", X_test_scaled[:5])  # 스케일링 후 일부 데이터 출력
-        print("✅ X_test_scaled 데이터 형태:", X_test_scaled.shape)  # 변환 후 차원 확인
-        print("✅ KNN 모델이 기대하는 입력 차원:", knn_hc._fit_X.shape)  # 학습된 KNN 모델 차원 확인
-
         # KNN 예측 수행
         sample["매물_HC"] = knn_hc.predict(X_test_scaled)
-        print("🎯 KNN 예측 완료! 첫 번째 예측 값:", sample["매물_HC"].iloc[0])
-
         sample["매물_DBSCAN"] = knn_dbscan.predict(X_test_scaled)
+        
         # 금액 단위 변환
         # sample["보증금"] = sample["보증금"] / 10000
         # sample["월세"] = sample["월세"] / 10000
@@ -151,7 +146,6 @@ def preprocess_for_one(df):
 
         # KNN 예측 수행
         sample["매물_HC"] = knn_hc.predict(X_test_scaled)
-        
         sample["매물_DBSCAN"] = knn_dbscan.predict(X_test_scaled)
 
         # 금액 단위 변환
@@ -169,14 +163,11 @@ def preprocess_for_one(df):
         X_test_scaled2 = scaler2.transform(X_test2)
         
         sample["지역_KMedoids"] = knn_kmedoids.predict(X_test_scaled2)
-        print("sample.columns:", sample.columns)
         sample['게재일'] = pd.to_datetime(sample['게재일'], errors='coerce')
         sample['계절'] = sample['게재일'].dt.month.apply(get_season)
         
         date_max = pickle.load(open("./saved/date_max.pkl", "rb"))
         sample['매물_등록_경과일'] = (date_max - sample['게재일']).dt.days
-        print("여기서 중간 점검 sample.매물확인방식:", sample["매물확인방식"].iloc[0])
-        print("여기서 중간 점검 sample.방향:", sample["방향"].iloc[0])
         
         # 원-핫 인코딩을 적용할 컬럼 및 제외할 값
         one_hot_columns = {
@@ -193,14 +184,12 @@ def preprocess_for_one(df):
 
         # 기존 카테고리 컬럼 삭제
         sample = sample.drop(columns=one_hot_columns.keys(), errors="ignore")
-        
         sample = sample.drop(columns = ['ID', '중개사무소', '제공플랫폼', '게재일', '매물_DBSCAN', '월세+관리비', '보증금_월세관리비_비율'], axis = 1)
-        print("필요없는 column 제거 후 중간점검 :", sample.columns)
         
-        for i in range(2, 7):  # 2부터 6까지 반복
+        for i in range(2, 7): 
             sample[f"매물_HC_{i}"] = 0
         
-        for i in range(1, 11):  # 1부터 10까지 반복
+        for i in range(1, 11):
             sample[f"지역_KMedoids_{i}"] = 0
         
         hc_value = sample['매물_HC'].iloc[0]  # 첫 번째 row의 값
@@ -212,7 +201,6 @@ def preprocess_for_one(df):
             sample[f"지역_KMedoids_{km_value}"] = 1
             
         sample = sample.drop(columns = ['매물_HC', '지역_KMedoids'], axis = 1)
-        print("여기서도 클러스터링 컬럼들 있는지 중간 점검, sample.columns : ", sample.columns)
         print("최종 컬럼 수 : ", len(sample.columns))
         print("최종 컬럼들 : ", sample.columns)
         return sample
@@ -227,16 +215,13 @@ def generate_random_id():
 
 
 #predict url로 POST 요청이 들어오면 predict()메서드를 수행하겠다는 의미
-@predict_bp.route("/predict", methods=["POST"])
-def predict():
-    """ 단일 예측 수행 및 DB 저장 """
+@predict_bp.route("/input/one", methods=["POST"])
+def input_one():
+    """ 단일 예측 입력 → DB 저장 → 예측 실행 """
     user_id, error_response = get_user_id_from_token()
     if error_response:
-        return error_response  # 인증 실패 시 에러 반환
-    
-    print("user_id:", user_id)
+        return error_response  
 
-    """ FormData 입력을 받아서 예측 수행 """
     data = {
         "매물확인방식": request.form.get("매물확인방식"),
         "월세": float(request.form.get("월세", 0)),
@@ -255,201 +240,89 @@ def predict():
         "게재일": request.form.get("게재일") + " 00:00:00" if request.form.get("게재일") else None
     }
 
+    df = pd.DataFrame([data])
+    df['ID'] = generate_random_id()
+    df.insert(0, 'ID', df.pop('ID'))
 
     try:
-        df = pd.DataFrame([data])  # JSON 데이터를 DataFrame으로 변환
-        print("✅ 단일 입력값 데이터 프레임 생성")
-        df['ID'] = generate_random_id() ############추후에 user_id값과 랜덤숫자의조합으로 만들기
-        df.insert(0, 'ID', df.pop('ID'))
-        print(df)
-        # 데이터 전처리 수행
-        preprocessed_df = preprocess_for_one(df)
-        print("✅ 단일 입력값 데이터 전처리 완료")
-    
-        if preprocessed_df.isna().sum().sum() > 0:
-            print("🚨 전처리 후에도 NaN이 남아 있음")
-            print(preprocessed_df.isna().sum())
-            
-        preprocessed_df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
-        preprocessed_df.fillna('-', inplace=True)  # NaN을 0으로 변환
-        
-        preprocessed_df = preprocessed_df[model.feature_names_in_]
-
-        try:
-            predictions = model.predict(preprocessed_df)
-            print("Predictions:", predictions)  # 예측 결과 출력
-        except Exception as e:
-            print("예측 중 오류 발생:", e)
-        print("📊 단일 입력값 모델 예측 완료")
-
-        # 예측 확률 계산
-        pred_proba = model.predict_proba(preprocessed_df)
-        correct_probs = pred_proba[np.arange(len(predictions)), predictions]
-        confidence_scores = (correct_probs * 100).round(1).astype(float).tolist()
-        print("confidence_scores : ", confidence_scores)
-        # 예측 결과 변환
-        prediction_labels = ["허위매물이 아닙니다" if pred == 0 else "허위매물입니다" for pred in predictions]
-        print("prediction_labels :", prediction_labels)
-        
-        # ✅ 단일 값도 리스트로 변환
-        if isinstance(confidence_scores, float):  # 단일 값이면 리스트로 변환
-            confidence_scores = [confidence_scores]
-        if isinstance(prediction_labels, str):  # 단일 값이면 리스트로 변환
-            prediction_labels = [prediction_labels]
-
-        # DB에 입력 데이터 저장하기 전 전처리
-        #df = df.where(pd.notna(df), None)
-        df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
-        df.fillna('-', inplace=True)  # NaN을 0으로 변환
         json_data = json.dumps(df.to_dict(orient="records"), ensure_ascii=False, allow_nan=False)
+        new_input = Input(user_id=user_id, input_data=json_data)
 
-        
-        # DB에 입력 데이터 저장
-        new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
-        #new_input = Input(user_id=user_id, input_data=data)
-        
-        # db.session.add(new_input)
-        # db.session.commit()
-        
-        try:
-            db.session.add(new_input)
-            db.session.commit()
-            db.session.refresh(new_input)
-            print("✅ 입력 데이터 DB 저장 성공")
-            print("🛠 현재 세션에 추가된 객체:", db.session.new)
-        except Exception as e:
-            db.session.rollback() #트랜잭션 롤백해서 트랜잭션을 깨끗하게 정리
-            print(f"❌ 입력 데이터 저장 실패: {e}")
-        finally:
-            db.session.close() 
-
-        # DB에 예측 결과 저장
-        new_prediction = Prediction(input_id=new_input.id, 
-                                    prediction_result=prediction_labels, 
-                                    confidence=confidence_scores)
-        db.session.add(new_prediction)
+        db.session.add(new_input)
         db.session.commit()
+        db.session.refresh(new_input)
 
-        result_df = df.copy()
-        result_df["예측 결과"] = prediction_labels[0]
-        result_df["신뢰도 (%)"] = confidence_scores[0]
-
-        result_html = result_df.to_html(classes="table table-striped", index=False)
-        print("predict.py의 predict() 메서드 모두 완료")
-
-        return render_template("result.html", table=result_html)
+        return predict_from_db(new_input.id)  # ✅ 바로 예측 실행
 
     except Exception as e:
-        return jsonify({"error": "예측 실패", "message": str(e)}), 400
+        db.session.rollback()
+        return jsonify({"error": "데이터 저장 실패", "message": str(e)}), 500
 
-
-@predict_bp.route("/predict/file", methods=["POST"])
-def predict_file():
-    """ CSV 파일을 업로드하여 다중 예측 수행 및 DB 저장 """
-    
+@predict_bp.route("/input/file", methods=["POST"])
+def input_file():
+    """ CSV 파일 업로드 → DB 저장 → 예측 실행 """
     user_id, error_response = get_user_id_from_token()
     if error_response:
         return error_response
-    
-    print("user_id:", user_id)
-    
-    print("🔍 서버에서 받은 파일 목록:", request.files)
+
     file = request.files.get("file")
-    print("📂 업로드된 파일:", file)
-
-    if file is None:
-        return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
-
-    if file.filename == "":
-        return jsonify({"error": "파일이 선택되지 않았습니다."}), 400
-
-    if not file.filename.endswith(".csv"):
+    if file is None or file.filename == "" or not file.filename.endswith(".csv"):
         return jsonify({"error": "CSV 파일만 업로드할 수 있습니다."}), 400
 
     try:
         df = pd.read_csv(file)
-        print("csv 파일 데이터 프레임 생성")
-
-        # 데이터 전처리 수행
-        preprocessed_df = preprocess_for_file(df)
-        print("csv 파일 데이터 전처리 완료")
-        
-        if preprocessed_df.isna().sum().sum() > 0:
-            print("🚨 전처리 후에도 NaN이 남아 있음")
-            print(preprocessed_df.isna().sum())
-        
-        preprocessed_df.replace([np.inf, -np.inf], np.nan, inplace=True)  # 무한대 값을 NaN으로 변환
-        preprocessed_df.fillna('-', inplace=True)  # NaN을 0으로 변환
-
-        print("preprocessed_df : ", preprocessed_df)
-        
-        # 예측 수행
-        predictions = model.predict(preprocessed_df)
-        print("📊 csv 파일 데이터 모델 예측 완료")
-        
-        # 예측 확률 계산
-        pred_proba = model.predict_proba(preprocessed_df)
-        correct_probs = pred_proba[np.arange(len(predictions)), predictions]
-        confidence_scores = (correct_probs * 100).round(1).astype(float).tolist()  # ✅ 리스트 변환
-
-        # 예측 결과 변환
-        prediction_labels = ["허위매물이 아닙니다" if pred == 0 else "허위매물입니다" for pred in predictions]
-
-        # ✅ JSON 변환이 필요한 경우만 json.dumps() 사용
-        #prediction_labels_json = json.dumps(prediction_labels, ensure_ascii=False)
-        #confidence_scores_json = json.dumps(confidence_scores)  # ✅ 리스트를 JSON 문자열로 변환
-
-        # 원본 데이터도 JSON으로 변환하여 저장
-        #df = df.where(pd.notna(df), None)
-        df.replace([np.inf, -np.inf], np.nan, inplace=True)
-        df.fillna('-', inplace=True)
-        #json_data = json.dumps(df.to_dict(orient="records"), ensure_ascii=False, allow_nan=False)
         json_data = json.dumps(df.to_dict(orient="records"), ensure_ascii=False, allow_nan=False)
 
-        # DB에 입력 데이터 저장
         new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
-        
-        # db.session.add(new_input)
-        # db.session.commit()
-        try:
-            db.session.add(new_input)
-            db.session.commit()
-            db.session.refresh(new_input)
-            print("🛠 현재 세션에 추가된 객체:", db.session.new)
-            print("✅ 입력 데이터 DB 저장 성공")
-        except Exception as e:
-            db.session.rollback() #트랜잭션 롤백해서 트랜잭션을 깨끗하게 정리
-            print(f"❌ 입력 데이터 저장 실패: {e}")
-        finally:
-            db.session.close() 
 
-        # ✅ DB에 예측 결과 저장 (ARRAY 타입을 지원하면 변환 없이 저장)
+        db.session.add(new_input)
+        db.session.commit()
+        db.session.refresh(new_input)
+
+        return predict_from_db(new_input.id)  #  바로 예측 실행
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "파일 저장 실패", "message": str(e)}), 500
+
+def predict_from_db(input_id):
+    """ 데이터베이스에서 불러와 예측 수행 """
+    try:
+        input_record = Input.query.get(input_id)
+        if not input_record:
+            return jsonify({"error": "해당 ID의 데이터가 존재하지 않습니다."}), 404
+
+        df = pd.DataFrame(json.loads(input_record.input_data))
+
+        # 단일 입력, 파일 입력 전처리 구분
+        if len(df) == 1:
+            preprocessed_df = preprocess_for_one(df)  # 단일 입력 처리
+        else:
+            preprocessed_df = preprocess_for_file(df)  #파일 입력 처리
+
+        predictions = model.predict(preprocessed_df)
+        pred_proba = model.predict_proba(preprocessed_df)
+        correct_probs = pred_proba[np.arange(len(predictions)), predictions]
+        confidence_scores = (correct_probs * 100).round(1).astype(float).tolist()
+
+        prediction_labels = ["허위매물이 아닙니다" if pred == 0 else "허위매물입니다" for pred in predictions]
+
         new_prediction = Prediction(
-            input_id=new_input.id,
-            prediction_result=prediction_labels,  # ✅ JSON 컬럼이면 json.dumps() 필요
-            confidence=confidence_scores  # ✅ 리스트 그대로 저장
+            input_id=input_id,
+            prediction_result=prediction_labels,
+            confidence=confidence_scores
         )
-        try:
-            db.session.add(new_prediction)
-            db.session.commit()
-            print("✅ 예측 데이터 DB 저장 성공")
-        except Exception as e:
-            db.session.rollback() #트랜잭션 롤백해서 트랜잭션을 깨끗하게 정리
-            print(f"❌ 예측 데이터 저장 실패: {e}")
-        finally:
-            db.session.close() 
 
-        # 결과 데이터프레임 생성
+        db.session.add(new_prediction)
+        db.session.commit()
+
         result_df = df.copy()
-        result_df["예측 결과"] = prediction_labels
-        result_df["신뢰도 (%)"] = confidence_scores
+        result_df["예측 결과"] = prediction_labels[0] if isinstance(prediction_labels, list) else prediction_labels
+        result_df["신뢰도 (%)"] = confidence_scores[0] if isinstance(confidence_scores, list) else confidence_scores
 
-        # HTML로 변환
         result_html = result_df.to_html(classes="table table-striped", index=False)
-        print("✅ 모든 과정 완료")
 
         return render_template("result.html", table=result_html)
-
 
     except Exception as e:
         return jsonify({"error": "예측 실패", "message": str(e)}), 400
