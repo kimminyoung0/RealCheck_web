@@ -243,6 +243,12 @@ def input_one():
     df = pd.DataFrame([data])
     df['ID'] = generate_random_id()
     df.insert(0, 'ID', df.pop('ID'))
+    
+    #df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    #df.fillna('0', inplace=True)  # NaN 값을 0으로 대체
+    missing_mask = df.isna()  # NaN 위치 저장
+    df = df.astype(object)  # 모든 데이터를 object 타입으로 변환 (숫자도 포함)
+    df[missing_mask] = "-"  # NaN이었던 곳만 "-"로 변경
 
     try:
         json_data = json.dumps(df.to_dict(orient="records"), ensure_ascii=False, allow_nan=False)
@@ -271,6 +277,13 @@ def input_file():
 
     try:
         df = pd.read_csv(file)
+        #df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        #df.fillna('0', inplace=True)  # NaN 값을 0으로 대체
+        
+        missing_mask = df.isna()  # NaN 위치 저장
+        df = df.astype(object)  # 모든 데이터를 object 타입으로 변환 (숫자도 포함)
+        df[missing_mask] = "-"  # NaN이었던 곳만 "-"로 변경
+        
         json_data = json.dumps(df.to_dict(orient="records"), ensure_ascii=False, allow_nan=False)
 
         new_input = Input(user_id=user_id if user_id is not None else None, input_data=json_data)
@@ -294,6 +307,9 @@ def predict_from_db(input_id):
 
         df = pd.DataFrame(json.loads(input_record.input_data))
 
+        # "-"를 NaN으로 변환 (원래 결측치였던 값)
+        df.replace("-", np.nan, inplace=True)
+        
         # 단일 입력, 파일 입력 전처리 구분
         if len(df) == 1:
             preprocessed_df = preprocess_for_one(df)  # 단일 입력 처리
