@@ -8,14 +8,27 @@ services:
       POSTGRES_DB: database
     ports:
       - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data  # 데이터베이스 볼륨 추가
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U min0 -d database"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   web:
     build: .
     depends_on:
-      - db
+      db:
+        condition: service_healthy  # PostgreSQL이 정상 실행된 후 Flask 실행
     ports:
       - "6010:6000" #호스트 포트 : 컨테이너 포트
       #컨테이너 내부에서 실행 중인 Flask는 기본적으로 5000번 포트에서 실행되도록 설정되어 있음.
       #따라서 컨테이너 내부에서는 5000번 포트에서 실행되는 게 맞고, 호스트에서는 5050으로 접근하도록 5050:5000으로 매핑하는 것
     environment:
       DATABASE_URL: postgresql://min0:kim980317@db/database
+    volumes:
+      - ./uploads:/app/uploads  # 업로드한 CSV 파일을 로컬에 저장됨
+
+volumes:
+  pg_data: #PostgreSQL 데이터를 유지하는 볼륨 (컨테이너 종료 후에도 DB 유지)

@@ -1,13 +1,17 @@
 from app import app, db
-from app.models import Users, Input, Prediction
+from app.models import Users, Input, Prediction  # 🔥 Users 테이블을 먼저 가져옴
 
-# 데이터베이스를 초기화하고 테이블을 생성하는 역할
-# 서버 실행 전에 한 번 실행해서 테이블을 생성해야 함.
-# DB 테이블 생성 함수
 def create_tables():
+    """ 🔹 Users 테이블을 먼저 생성한 후, Input 및 Prediction 테이블 생성 """
     with app.app_context():
-        db.create_all()
-        print("✅ Database tables created!")
+        # db.create_all()
+        print("📌 Users 테이블을 먼저 생성합니다...")
+        db.metadata.create_all(bind=db.engine, tables=[Users.__table__])  # ✅ Users 테이블만 먼저 생성
+
+        print("📌 나머지 테이블(Input, Prediction) 생성 시작...")
+        db.metadata.create_all(bind=db.engine, tables=[Input.__table__, Prediction.__table__])  # ✅ 그다음 Input, Prediction 생성
+
+        print("✅ 모든 테이블이 정상적으로 생성되었습니다!")
 
 if __name__ == "__main__":
     create_tables()
