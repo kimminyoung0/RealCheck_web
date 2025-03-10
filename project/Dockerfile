@@ -24,4 +24,9 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY . .
 
 # 8️⃣ Flask 실행
-CMD ["python", "run.py"]
+#CMD ["python", "run.py"]
+
+# 배포를 위해 Elastic Beanstalk에서는 Werkzeug(Flask와 같은 Python 웹 프레임워크에서 HTTP 요청을 처리하고 WSGI 표준을 구현하는 도구)
+# 를 지원하지 않기 때문에 Gunicorn으로 변경하고 4개의 워커 프로세스를 실행하도록 설정
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+

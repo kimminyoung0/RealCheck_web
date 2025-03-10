@@ -15,11 +15,16 @@
         <a href="/" class="logo">RealCheck</a> 
         <nav>
             <ul>
-                <li><a href="/">홈</a></li>
-                <li><a href="/predict">허위매물판별</a></li>
-                <li><a href="/login">로그인</a></li>
-                <li><a href="/register">회원가입</a></li>
-                <li><a href="/mypage" class="mypage">My Page</a></li>
+                <div id="auth-buttons">
+                    <li><a href="/">홈</a></li>
+                    <li><a href="/predict">허위매물판별</a></li>
+                    <!-- 로그인 상태에 따라 버튼이 바뀜 -->
+                    <li><a href="/auth/kakao/login" id="login-btn">로그인 / 회원가입</a></li>
+                    <li><a href="/mypage" class="mypage" id="mypage-btn" style="display: flex;">My Page</a></li>
+                </div>
+                <!-- <li><a href="/login">로그인</a></li>
+                <li><a href="/register">회원가입</a></li> 
+                <li><a href="/mypage" class="mypage">My Page</a></li> -->
             </ul>
         </nav>
     </header>
@@ -29,9 +34,24 @@
     </main>
 
     <footer>
-      <p>📊 RealCheck가 더 똑똑해지는 중...🔧</p>
-  </footer>
+        <p>📊 RealCheck가 더 똑똑해지는 중...🔧</p>
+    </footer>
     <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function() {
+            const loginBtn = document.getElementById("login-btn");
+            const myPageBtn = document.getElementById("mypage-btn");
+        
+            // 로그인 상태 확인
+            const response = await fetch("/auth/status");
+            if (response.ok) {
+                loginBtn.style.display = "none";  // 로그인 버튼 숨김
+                myPageBtn.style.display = "block";  // My Page 버튼 표시
+            }
+        });
+        </script>
 </body>
 </html>
+

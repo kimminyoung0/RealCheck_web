@@ -1,68 +1,70 @@
-from flask import Blueprint, request, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
-import jwt
-import datetime
-from app import app, db
+from flask import Blueprint, request, redirect, jsonify, session
+from app import db
 from app.models import Users
+import requests
 
 auth_bp = Blueprint('auth', __name__)
 
-# 회원가입 API
-@auth_bp.route('/register', methods=['POST'])
-def register():
-    """ 회원가입 API (중복 이메일 체크 포함) """
-    data = request.json
-    data = request.get_json()
-    if not data:
-        return jsonify({"message": "잘못된 요청입니다. JSON 데이터를 보내주세요."}), 400
-    email = data.get("email")
-    password = data.get("password")
-    next_page = data.get("next", "/")
+KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
+KAKAO_USER_URL = "https://kapi.kakao.com/v2/user/me"
+CLIENT_ID = "b33f3e54487184ca0a1f259a2cd1eb1d"
+REDIRECT_URI = "http://127.0.0.1:6000/auth/kakao/callback"
 
-    # 중복 이메일 검사
-    if Users.query.filter_by(email=email).first():
-        print(f"🔍 회원가입 시도 - 이미 가입된 이메일 : {email}")
-        return jsonify({"message": "이미 가입된 이메일입니다."}), 400
-
-    hashed_password = generate_password_hash(password)  # 비밀번호 해싱
-    print(f"✅ 생성된 해시: {hashed_password}")
-    new_user = Users(email=email, password=hashed_password)
-
-    try:
-        db.session.add(new_user)
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback() #트랜잭션 롤백해서 트랜잭션을 깨끗하게 정리
-        print(f"❌ user 데이터 저장 실패: {e}")
-    finally:
-        db.session.close() 
-
-    print("✅ 회원가입 완료, 다음 페이지로 이동:", next_page)  # 🔥 로그 찍기
-
-    return jsonify({"message": "회원가입 성공!", "next": next_page}), 201
-
-# 로그인 API
-@auth_bp.route('/login', methods=['POST'])
-def login():
-    """ 사용자 로그인 API (JWT 토큰 발급) """
-    data = request.json
-    email = data.get("email")
-    password = data.get("password")
-    next_page = data.get("next", "/")  # 기본적으로 홈으로 이동
-
-    user = Users.query.filter_by(email=email).first()
-
-    if not user or not check_password_hash(user.password, password):
-        print(f"❌ 비밀번호 검증 실패: 입력된 비밀번호: {password}, 저장된 해시: {user.password}")
-        return jsonify({"message": "이메일 또는 비밀번호가 올바르지 않습니다."}), 401
-
-    token = jwt.encode(
-        {
-            "user_id": user.id,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)  # 2시간 유효
-        },
-        app.config["SECRET"],
-        algorithm="HS256"
+@auth_bp.route("/auth/kakao/login")
+def kakao_login():
+    """ 카카오 로그인 요청 (카카오 로그인 페이지로 리다이렉트) """
+    kakao_auth_url = (
+        f"https://kauth.kakao.com/oauth/authorize"
+        f"?client_id={CLIENT_ID}"
+        f"&redirect_uri={REDIRECT_URI}"
+        f"&response_type=code"
     )
-    print(f"✅ 토큰 발급 성공: {token}")  # 🔥 로그 추가
-    return jsonify({"token": token})
+    return redirect(kakao_auth_url)
+
+@auth_bp.route("/auth/kakao/callback")
+def kakao_callback():
+    """ 카카오 로그인 콜백 """
+    code = request.args.get("code")
+    if not code:
+        return jsonify({"message": "인가 코드 없음"}), 400
+
+    # 1️⃣ 카카오에서 액세스 토큰 요청
+    token_data = {
+        "grant_type": "authorization_code",
+        "client_id": CLIENT_ID,
+        "redirect_uri": REDIRECT_URI,
+        "code": code
+    }
+    token_res = requests.post(KAKAO_TOKEN_URL, data=token_data).json()
+    access_token = token_res.get("access_token")
+
+    if not access_token:
+        return jsonify({"message": "토큰 요청 실패"}), 400
+
+    # 2️⃣ 액세스 토큰으로 사용자 정보 요청
+    headers = {"Authorization": f"Bearer {access_token}"}
+    user_res = requests.get(KAKAO_USER_URL, headers=headers).json()
+
+    kakao_id = user_res["id"]
+    email = user_res["kakao_account"].get("email", f"{kakao_id}@kakao.com")
+    #nickname = user_res["properties"]["nickname"]
+    
+    # 3️⃣ DB에 사용자 저장 (이미 있으면 패스)
+    user = Users.query.filter_by(email=email).first()
+    if not user:
+        user = Users(email=email, kakao_id=kakao_id)
+        db.session.add(user)
+        db.session.commit()
+
+    # 세션 저장 (로그인 유지)
+    session.permanent = True # 세션을 지속적으로 유지하도록 설정
+    session["user_id"] = user.id
+    session["email"] = user.email
+    
+    return jsonify({"message": "카카오 로그인 성공!", "email": email}), 200
+
+@auth_bp.route("/auth/logout")
+def logout():
+    """ 로그아웃 (세션 삭제) """
+    session.clear()
+    return jsonify({"message": "로그아웃 완료!"}), 200

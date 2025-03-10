@@ -1,0 +1,13 @@
+{
+  "AWSEBDockerrunVersion": "1",
+  "Image": {
+    "Name": "kimminyoung0/project-web",
+    "Update": "true"
+  },
+  "Ports": [
+    {
+      "ContainerPort": "6000"
+    }
+  ]
+}
+

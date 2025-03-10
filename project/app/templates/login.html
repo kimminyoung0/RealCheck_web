@@ -4,64 +4,16 @@
 
 {% block content %}
 <h1>로그인</h1>
-<form id="login-form">
-    <input type="hidden" name="next" id="next" value="">
-    <label>이메일: <input type="email" name="email" required></label><br>
-    <label>비밀번호: <input type="password" name="password" required></label><br>
-    <button type="submit">로그인</button>
-</form>
 
-<div id="login-result" style="color: red;"></div>
+<!-- 카카오 로그인 버튼 -->
+<a href="/auth/kakao/login">
+    <img src="https://developers.kakao.com/assets/img/about/logos/kakaologin/kr/kakaologin_medium_wide.png"
+        alt="카카오 로그인" />
+</a>
 
 <p>계정이 없으신가요? <a href="/register">회원가입</a></p>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const loginForm = document.getElementById("login-form");
-        const loginResult = document.getElementById("login-result");
-        
-        // URL에서 'next' 값 가져오기
-        const params = new URLSearchParams(window.location.search);
-        const nextPage = params.get("next") || "/";
-        document.getElementById('next').value = nextPage;
-    
-        loginForm.addEventListener("submit", async function(event) {
-            event.preventDefault(); // 기본 폼 제출 방지
-    
-            let formData = {
-                "email": document.querySelector('input[name="email"]').value,
-                "password": document.querySelector('input[name="password"]').value
-            };
-    
-            try {
-                const response = await fetch("/login", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(formData)
-                });
-    
-                const result = await response.json();
-                console.log("로그인 응답 데이터:", result);
-    
-                if (response.ok) {
-                    localStorage.setItem("token", result.token); // JWT 저장
-                    loginResult.innerText = "로그인 성공! 메인 페이지로 이동합니다.";
-                    
-                    setTimeout(() => {
-                        window.location.href = nextPage; // 로그인 후 이동
-                    }, 1500);
-                } else {
-                    loginResult.innerText = "로그인 실패: " + result.message;
-                }
-            } catch (error) {
-                console.error("로그인 오류 발생:", error);
-                loginResult.innerText = "로그인 중 오류가 발생했습니다.";
-            }
-        });
-    });
-    </script>
 {% endblock %}
 
 {% block scripts %}
-
 {% endblock %}

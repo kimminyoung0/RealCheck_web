@@ -387,3 +387,9 @@ tr:hover {
 .goback.active {
   background-color: #2E4A21;
 }
+
+#auth-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

@@ -1,6 +1,9 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate 
+from datetime import timedelta
+from dotenv import load_dotenv
+import os
 
 app = Flask(__name__)
 
@@ -10,6 +13,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = "secret"
 app.config['DEBUG'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True 
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=2)  # 세션 2시간 유지
+
+load_dotenv()  # .env 파일 로드
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "fallback-secret-key")
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
