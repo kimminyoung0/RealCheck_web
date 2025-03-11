@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}마이페이지 - RealCheck{% endblock %}
+
+{% block content %}
+<div class="mypage-container">
+    <!-- 좌측 패널: 사용자 정보 -->
+    <div class="sidebar">
+        <div class="profile-section">
+            <h2>내 계정 정보</h2>
+            <img src="{{ user.profile_image if user.profile_image != '이미지 없음' else '/static/default_profile.png' }}" 
+                alt="프로필 사진" class="profile-img">
+            <p>닉네임: {{ user.profile_nickname }}</p>
+            <button class="btn-settings">설정</button>
+            <a href="/auth/logout" class="btn-logout">로그아웃</a>
+        </div>a{% extends "base.html" %}
+
+        {% block title %}마이페이지 - RealCheck{% endblock %}
+        
+        {% block content %}
+        <div class="mypage-container">
+            <!-- 좌측 패널: 사용자 정보 -->
+            <div class="sidebar">
+                <div class="profile-section">
+                    <h2>내 계정 정보</h2>
+                    <img src="{{ user.profile_image if user.profile_image != '이미지 없음' else '/static/default_profile.png' }}" 
+                        alt="프로필 사진" class="profile-img">
+                    <p>닉네임: {{ user.profile_nickname }}</p>
+                    <button class="btn-settings">설정</button>
+                    <a href="/auth/logout" class="btn-logout">로그아웃</a>
+                </div>
+                <div class="history-section">
+                    <h3>부동산 예측 내역</h3>
+                    <ul id="prediction-history">
+                        <!-- 예측 내역 동적으로 추가 -->
+                    </ul>
+                </div>
+            </div>
+        
+            <!-- 우측 패널: 예측 내역 -->
+            <div class="content">
+                <h2 id="prediction-title">예측 내역</h2>
+                <div class="table-container">
+                    <table id="prediction-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>매물확인방식</th>
+                                <th>보증금</th>
+                                <th>전용면적</th>
+                                <th>방수</th>
+                                <th>욕실수</th>
+                                <th>방향</th>
+                                <th>주차가능여부</th>
+                                <th>예측 결과</th>
+                                <th>신뢰도 (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 예측 데이터 동적으로 추가 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <link rel="stylesheet" href="{{ url_for('static', filename='mypage.css') }}">
+        <script src="{{ url_for('static', filename='mypage.js') }}" defer></script>
+        {% endblock %}
+        <div class="history-section">
+            <h3>부동산 예측 내역</h3>
+            <ul id="prediction-history">
+                <!-- 예측 내역 동적으로 추가 -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- 우측 패널: 예측 내역 -->
+    <div class="content">
+        <h2 id="prediction-title">예측 내역</h2>
+        <div class="table-container">
+            <table id="prediction-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>매물확인방식</th>
+                        <th>보증금</th>
+                        <th>전용면적</th>
+                        <th>방수</th>
+                        <th>욕실수</th>
+                        <th>방향</th>
+                        <th>주차가능여부</th>
+                        <th>예측 결과</th>
+                        <th>신뢰도 (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 예측 데이터 동적으로 추가 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='mypage.js') }}"></script>
+{% endblock %}
