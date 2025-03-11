@@ -1,4 +1,4 @@
-from flask import Blueprint, request, redirect, jsonify, session
+from flask import Blueprint, request, redirect, jsonify, session, url_for
 from app import db
 from app.models import Users
 import requests
@@ -8,7 +8,7 @@ auth_bp = Blueprint('auth', __name__)
 KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_USER_URL = "https://kapi.kakao.com/v2/user/me"
 CLIENT_ID = "b33f3e54487184ca0a1f259a2cd1eb1d"
-REDIRECT_URI = "http://127.0.0.1:6000/auth/kakao/callback"
+REDIRECT_URI = "http://localhost:6010/auth/kakao/callback"
 
 @auth_bp.route("/auth/kakao/login")
 def kakao_login():
@@ -44,27 +44,65 @@ def kakao_callback():
     # 2️⃣ 액세스 토큰으로 사용자 정보 요청
     headers = {"Authorization": f"Bearer {access_token}"}
     user_res = requests.get(KAKAO_USER_URL, headers=headers).json()
-
-    kakao_id = user_res["id"]
-    email = user_res["kakao_account"].get("email", f"{kakao_id}@kakao.com")
-    #nickname = user_res["properties"]["nickname"]
+    print("카카오 응답 데이터:", user_res)
     
-    # 3️⃣ DB에 사용자 저장 (이미 있으면 패스)
-    user = Users.query.filter_by(email=email).first()
+    kakao_id = user_res["id"]
+    profile_data = user_res.get("kakao_account", {}).get("profile", {})
+    profile_nickname = profile_data.get("nickname", "사용자")
+    profile_image = profile_data.get("profile_image_url", None)
+    print("profile_image url 길이", len(profile_image))
+    
+    # 3️⃣ DB에 사용자 저장
+    user = Users.query.get(kakao_id)
     if not user:
-        user = Users(email=email, kakao_id=kakao_id)
+        user = Users(id=kakao_id, profile_nickname=profile_nickname, profile_image=profile_image)
         db.session.add(user)
         db.session.commit()
 
     # 세션 저장 (로그인 유지)
     session.permanent = True # 세션을 지속적으로 유지하도록 설정
     session["user_id"] = user.id
-    session["email"] = user.email
+    session["profile_nickname"] = user.profile_nickname
+    session["profile_image"] = user.profile_image
     
-    return jsonify({"message": "카카오 로그인 성공!", "email": email}), 200
+    return redirect(url_for('routes.index'))
 
 @auth_bp.route("/auth/logout")
 def logout():
-    """ 로그아웃 (세션 삭제) """
+    """ 로그아웃 (세션 삭제 후 홈으로 이동) """
     session.clear()
-    return jsonify({"message": "로그아웃 완료!"}), 200
+    return redirect(url_for("routes.index"))  # 로그아웃 후 홈으로 이동
+
+
+
+# @auth_bp.route("/auth/status")
+# def auth_status():
+#     """ 로그인 상태 확인 """
+#     user_id = session.get("user_id")
+#     profile_nickname = session.get("profile_nickname")
+
+#     print("auth.py 파일의 auth_status 실행 중!")
+
+#     # JavaScript에서 요청한 경우 JSON 응답 반환
+#     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+#         if user_id:
+#             return jsonify({"user": {"id": user_id, "nickname": profile_nickname}}), 200
+#         else:
+#             return jsonify({"user": None}), 200
+
+#     # 브라우저에서 직접 접근한 경우 로그인 페이지로 이동
+#     return redirect(url_for("auth.kakao_login"))
+
+@auth_bp.route("/auth/status")
+def auth_status():
+    """ 로그인 상태 확인 """
+    
+    user_id = session.get("user_id")
+    profile_nickname = session.get("profile_nickname")
+
+    print("auth.py 파일의 auth_status 실행 중!")
+
+    # 🔹 항상 JSON 반환 (리다이렉트 제거)
+    return jsonify({
+        "user": {"id": user_id, "nickname": profile_nickname} if user_id else None
+    }), 200
