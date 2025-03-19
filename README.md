@@ -10,7 +10,10 @@
 - **MLOps & 배포**: Docker, Flask  
 - **데이터베이스**: PostgreSQL
 ---------------------------------
-## 이슈 해결 사항
+## 블로그 정리 및 이슈 해결 사항
+[EDA](https://velog.io/@kimminyoung0/EDA)
+[매물을 저층, 중층, 고층으로 나누고 싶을 때](https://velog.io/@kimminyoung0/매물을-저층-중층-고층으로-나누고-싶을-때-t-분포f-분포)
+
 ---------------------------------
 ## Dataset Info
 train.csv
