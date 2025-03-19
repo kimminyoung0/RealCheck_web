@@ -13,6 +13,7 @@
 ## 블로그 정리 및 이슈 해결 사항
 - [EDA](https://velog.io/@kimminyoung0/EDA)
 - [매물을 저층, 중층, 고층으로 나누고 싶을 때](https://velog.io/@kimminyoung0/매물을-저층-중층-고층으로-나누고-싶을-때-t-분포f-분포)
+- [데이터 전처리](https://velog.io/@kimminyoung0/데이터-전처리)
 
 ---------------------------------
 ## Dataset Info
@@ -24,6 +25,7 @@ ID : 샘플별 고유 ID / 매물확인방식 / 보증금 / 월세 / 전용면�
 
 sample_submission.csv - 제출 양식
 ID : 샘플별 고유 ID / 허위매물여부
+
 ------------------------------------------
 
 ## EDA
