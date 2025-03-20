@@ -11,6 +11,8 @@
 - **데이터베이스**: PostgreSQL
 ---------------------------------
 ## 블로그 정리 및 이슈 해결 사항
+XGBoost를 선택한 이유
+[https://velog.io/@kimminyoung0/ML-XGBoost-LightGBM-CatBoost-비교](https://velog.io/@kimminyoung0/ML-XGBoost-LightGBM-CatBoost-비교)
 - [EDA](https://velog.io/@kimminyoung0/EDA)
 - [매물을 저층, 중층, 고층으로 나누고 싶을 때](https://velog.io/@kimminyoung0/매물을-저층-중층-고층으로-나누고-싶을-때-t-분포f-분포)
 - [데이터 전처리](https://velog.io/@kimminyoung0/데이터-전처리)
