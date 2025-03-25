@@ -16,7 +16,7 @@ XGBoost를 선택한 이유
 [https://velog.io/@kimminyoung0/ML-XGBoost-LightGBM-CatBoost-비교](https://velog.io/@kimminyoung0/ML-XGBoost-LightGBM-CatBoost-비교)
 
 - [매물을 저층, 중층, 고층으로 나누고 싶을 때](https://velog.io/@kimminyoung0/매물을-저층-중층-고층으로-나누고-싶을-때-t-분포f-분포)
-- [데이터 전처리](https://velog.io/@kimminyoung0/데이터-전처리)
+- [가격 변수 간 상관관계가 약한 원인 분석하기 (+가설설정, 실험 설계, 결과해석)](https://velog.io/@kimminyoung0/데이터-전처리-매물-등록-경과일-결측치-개수)
 
 ---------------------------------
 ## Dataset Info
